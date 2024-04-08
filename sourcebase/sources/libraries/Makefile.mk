@@ -1,0 +1,3 @@
+-include sources/libraries/arm_rts/Makefile.mk
+-include sources/libraries/libvvtk/Makefile.mk
+-include sources/libraries/librealtex/Makefile.mk

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+<remote fetch="ssh://psp.sdlc.rd.realtek.com:29418/" name="origin" />
+<default remote="origin" revision="master" />
+<project name="kernel" upstream="kernel" revision="eb0e0d50083545ad49931d3a6b765130242d9a6f" />
+<project name="uclibc" upstream="uclibc" revision="6bb60280ff88006edfc65bbd28c4b5ab0da2c8c4" />
+<project name="gnulib" upstream="gnulib" revision="b4c0ee7a1620667560476b6e9e0b77b486e3e70b" />
+<project name="wrapper" upstream="wrapper" revision="2919e8b1e0db03e46435aa5af99bf90a740bb280" />
+<project name="monitor/linux" upstream="monitor/linux" revision="7fdec1a3a7ae4d140950f05f0d51ba18a7c8599d" />
+<project name="monitor/windows" upstream="monitor/windows" revision="15f50bf87f7a4b69543f4f5dce5f0b9a3c687039" />
+</manifest>
