@@ -48,11 +48,7 @@ STRIP =$(CROSS_COMPILE)strip
 OPTIMIZE_OPTION	=	-g -s -O3
 WARNNING_OPTION	+=	#-Werror -W -Wno-missing-field-initializers
 
-#DEBUG-pre
 
-ifdef DEBUG
-CXXFLAGS += -DDEBUG
-endif
 
 
 CXXFLAGS += $(HAVE_FLAGS)
@@ -100,6 +96,12 @@ ifdef BUILD_ARM_VVTK
 #TODO fix vvtk path
 DEPENDENCIES=sources/libraries/arm_rts
 # LDLIBS +=  $(DEPENDENCIES)/lib/libfreetype.a
+endif
+
+
+#DEBUG-preprocessor
+ifdef DEBUG
+CXXFLAGS += -DDEBUG
 endif
 
 ifdef FEATURE_RTMP
