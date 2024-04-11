@@ -100,8 +100,8 @@ endif
 
 
 #DEBUG-preprocessor
-ifdef DEBUG
-CXXFLAGS += -DDEBUG
+ifdef TEST_USE_WEB_SOCKET
+CXXFLAGS += -DTEST_USE_WEB_SOCKET
 endif
 
 ifdef FEATURE_RTMP

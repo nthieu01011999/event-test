@@ -59,10 +59,10 @@ using json = nlohmann::json;
 
 q_msg_t gw_task_webrtc_mailbox;
 
-#ifdef TEST_USE_WEB_SOCKET
+// #ifdef TEST_USE_WEB_SOCKET
 
 static int8_t loadWsocketSignalingServerConfigFile(string &wsUrl);
-#endif
+// #endif
 
 static Configuration rtcConfig;
 static int8_t loadIceServersConfigFile(Configuration &rtcConfig);
@@ -77,42 +77,95 @@ void *gw_task_webrtc_entry(void *) {
 	rtcConfig.disableAutoNegotiation = false; // use etLocalDescription auto
 	
 	
-#ifdef TEST_USE_WEB_SOCKET
+// #ifdef TEST_USE_WEB_SOCKET
 	/* init websocket */
-	auto ws = make_shared<WebSocket>();	   // init poll serivce and threadpool = 4
-	ws->onOpen([]() {
-		APP_PRINT("WebSocket connected, signaling ready\n");
-		timer_remove_attr(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ);
-	});
+	// auto ws = make_shared<WebSocket>();	   // init poll serivce and threadpool = 4
+	// ws->onOpen([]() {
+	// 	APP_PRINT("WebSocket connected, signaling ready\n");
+	// 	timer_remove_attr(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ);
+	// });
 
-	ws->onClosed([]() {
-		APP_PRINT("WebSocket closed\n");
-		timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, GW_WEBRTC_TRY_CONNECT_SOCKET_INTERVAL, TIMER_ONE_SHOT);
-	});
+	// ws->onClosed([]() {
+	// 	APP_PRINT("WebSocket closed\n");
+	// 	timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, GW_WEBRTC_TRY_CONNECT_SOCKET_INTERVAL, TIMER_ONE_SHOT);
+	// });
 
-	ws->onError([](const string &error) { APP_PRINT("WebSocket failed: %s\n", error.c_str()); });
+	// ws->onError([](const string &error) { APP_PRINT("WebSocket failed: %s\n", error.c_str()); });
 
-	ws->onMessage([&](variant<binary, string> data) {
-		if (!holds_alternative<string>(data)) {
-			return;
-		}
-		string msg = get<string>(data);
-		APP_DBG("%s\n", msg.data());
-		task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
-	});
+	// ws->onMessage([&](variant<binary, string> data) {
+	// 	if (!holds_alternative<string>(data)) {
+	// 		return;
+	// 	}
+	// 	string msg = get<string>(data);
+	// 	APP_DBG("%s\n", msg.data());
+	// 	task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
+	// });
 
-	std::string wsUrl;
-	loadWsocketSignalingServerConfigFile(wsUrl);
+	// std::string wsUrl;
+	// loadWsocketSignalingServerConfigFile(wsUrl);
 
-	/* For Debugging */
-	wsUrl = "ws://42.116.138.38:8089/" + mtce_getSerialInfo();
-	std::cout << "wsURL: " << wsUrl << std::endl;
+	// /* For Debugging */
+	// wsUrl = "ws://sig.espitek.com:8089/" + mtce_getSerialInfo();
+	// std::cout << "wsURL: " << wsUrl << std::endl;
 
-	if (!wsUrl.empty()) {
-		timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, 3000, TIMER_ONE_SHOT);
-	}
+	// if (!wsUrl.empty()) {
+	// 	timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, 3000, TIMER_ONE_SHOT);
+	// }
 
-#endif
+    /* init websocket */
+    auto ws = make_shared<WebSocket>(); // init poll service and threadpool = 4
+
+    // Guard flag to check WebSocket connection status
+    atomic<bool> isConnected(false);
+
+    ws->onOpen([&]() {
+        isConnected.store(true);
+        APP_PRINT("WebSocket connected, signaling ready\n");
+        timer_remove_attr(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ);
+    });
+
+    ws->onClosed([&]() {
+        isConnected.store(false);
+        APP_PRINT("WebSocket closed\n");
+        timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, GW_WEBRTC_TRY_CONNECT_SOCKET_INTERVAL, TIMER_ONE_SHOT);
+    });
+
+    ws->onError([&](const string &error) {
+        isConnected.store(false);
+        APP_PRINT("WebSocket connection failed: %s\n", error.c_str());
+        // Depending on your application logic, you might want to attempt a reconnection here.
+    });
+
+    ws->onMessage([&](variant<binary, string> data) {
+        if (!holds_alternative<string>(data)) {
+            return;
+        }
+        string msg = get<string>(data);
+        APP_DBG("%s\n", msg.data());
+        task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
+    });
+
+    std::string wsUrl;
+    loadWsocketSignalingServerConfigFile(wsUrl);
+
+    // Debugging output
+    wsUrl = "ws://sig.espitek.com:8089/" + mtce_getSerialInfo();
+    std::cout << "Attempting to connect WebSocket server at URL: " << wsUrl << std::endl;
+
+    // Attempt to connect
+    ws->open(wsUrl);
+
+    // Wait a bit to see if the connection succeeds (or modify based on your app logic)
+    std::this_thread::sleep_for(3s); // Adjust the timing as necessary
+
+    // Check the connection status
+    if (isConnected.load()) {
+        APP_PRINT("WebSocket is successfully connected.\n");
+    } else {
+        APP_PRINT("WebSocket connection failed or is still in progress.\n");
+    }
+
+// #endif
 	APP_DBG("[STARTED] gw_task_webrtc_entry\n");
 
 	while (1) {
