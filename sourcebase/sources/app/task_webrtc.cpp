@@ -29,27 +29,19 @@
 #include "app_data.h"
 #include "app_config.h"
 #include "app_dbg.h"
-// #include "datachannel_hdl.h"
-
-#include "task_list.h"
-
-// #include "dispatchqueue.hpp"
-// #include "helpers.hpp"
 #include "rtc/rtc.hpp"
 #include "json.hpp"
-// #include "stream.hpp"
 
 #ifdef BUILD_ARM_VVTK
-// #include "h26xsource.hpp"
-// #include "audiosource.hpp"
 #endif
 
-// #include "mtce_audio.hpp"
 #include "parser_json.h"
 #include "utils.h"
+#include "task_list.h"
+
 
 #define CLIENT_SIGNALING_MAX 20
-#define CLIENT_MAX			 10
+#define CLIENT_MAX 10
 
 using namespace rtc;
 using namespace std;
@@ -58,179 +50,117 @@ using namespace chrono;
 using json = nlohmann::json;
 
 q_msg_t gw_task_webrtc_mailbox;
-
-// #ifdef TEST_USE_WEB_SOCKET
-
-static int8_t loadWsocketSignalingServerConfigFile(string &wsUrl);
-// #endif
-
 static Configuration rtcConfig;
+
 static int8_t loadIceServersConfigFile(Configuration &rtcConfig);
-
-
+static int8_t loadWsocketSignalingServerConfigFile(string &wsUrl);
 
 void *gw_task_webrtc_entry(void *) {
-	ak_msg_t *msg = AK_MSG_NULL;
-
-	wait_all_tasks_started();
-	loadIceServersConfigFile(rtcConfig);
-	rtcConfig.disableAutoNegotiation = false; // use etLocalDescription auto
 	
-	
-// #ifdef TEST_USE_WEB_SOCKET
-	/* init websocket */
-	// auto ws = make_shared<WebSocket>();	   // init poll serivce and threadpool = 4
-	// ws->onOpen([]() {
-	// 	APP_PRINT("WebSocket connected, signaling ready\n");
-	// 	timer_remove_attr(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ);
-	// });
+    // wait_all_tasks_started();
+	APP_DBG("[STARTED_1] gw_task_webrtc_entry\n");
+    if (loadIceServersConfigFile(rtcConfig) != APP_CONFIG_SUCCESS) {
+        APP_PRINT("Failed to load ICE servers configuration.\n");
+        return nullptr;  // Exit if configuration fails
+    }
 
-	// ws->onClosed([]() {
-	// 	APP_PRINT("WebSocket closed\n");
-	// 	timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, GW_WEBRTC_TRY_CONNECT_SOCKET_INTERVAL, TIMER_ONE_SHOT);
-	// });
+    rtcConfig.disableAutoNegotiation = false;  // Set localDescription automatically
 
-	// ws->onError([](const string &error) { APP_PRINT("WebSocket failed: %s\n", error.c_str()); });
-
-	// ws->onMessage([&](variant<binary, string> data) {
-	// 	if (!holds_alternative<string>(data)) {
-	// 		return;
-	// 	}
-	// 	string msg = get<string>(data);
-	// 	APP_DBG("%s\n", msg.data());
-	// 	task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
-	// });
-
-	// std::string wsUrl;
-	// loadWsocketSignalingServerConfigFile(wsUrl);
-
-	// /* For Debugging */
-	// wsUrl = "ws://sig.espitek.com:8089/" + mtce_getSerialInfo();
-	// std::cout << "wsURL: " << wsUrl << std::endl;
-
-	// if (!wsUrl.empty()) {
-	// 	timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, 3000, TIMER_ONE_SHOT);
-	// }
-
-    /* init websocket */
-    auto ws = make_shared<WebSocket>(); // init poll service and threadpool = 4
-
-    // Guard flag to check WebSocket connection status
+    // WebSocket initialization
+    auto ws = make_shared<WebSocket>();
     atomic<bool> isConnected(false);
 
     ws->onOpen([&]() {
         isConnected.store(true);
         APP_PRINT("WebSocket connected, signaling ready\n");
-        timer_remove_attr(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ);
     });
 
     ws->onClosed([&]() {
         isConnected.store(false);
         APP_PRINT("WebSocket closed\n");
-        timer_set(GW_TASK_WEBRTC_ID, GW_WEBRTC_TRY_CONNECT_SOCKET_REQ, GW_WEBRTC_TRY_CONNECT_SOCKET_INTERVAL, TIMER_ONE_SHOT);
     });
 
     ws->onError([&](const string &error) {
         isConnected.store(false);
         APP_PRINT("WebSocket connection failed: %s\n", error.c_str());
-        // Depending on your application logic, you might want to attempt a reconnection here.
     });
 
     ws->onMessage([&](variant<binary, string> data) {
-        if (!holds_alternative<string>(data)) {
-            return;
+        if (holds_alternative<string>(data)) {
+            string msg = get<string>(data);
+            APP_DBG("%s\n", msg.data());
+            // Handle signaling message
         }
-        string msg = get<string>(data);
-        APP_DBG("%s\n", msg.data());
-        task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
     });
 
     std::string wsUrl;
-    loadWsocketSignalingServerConfigFile(wsUrl);
-
-    // Debugging output
-    wsUrl = "ws://sig.espitek.com:8089/" + mtce_getSerialInfo();
-    std::cout << "Attempting to connect WebSocket server at URL: " << wsUrl << std::endl;
-
-    // Attempt to connect
-    ws->open(wsUrl);
-
-    // Wait a bit to see if the connection succeeds (or modify based on your app logic)
-    std::this_thread::sleep_for(3s); // Adjust the timing as necessary
-
-    // Check the connection status
-    if (isConnected.load()) {
-        APP_PRINT("WebSocket is successfully connected.\n");
-    } else {
-        APP_PRINT("WebSocket connection failed or is still in progress.\n");
+    if (loadWsocketSignalingServerConfigFile(wsUrl) != APP_CONFIG_SUCCESS || wsUrl.empty()) {
+        APP_PRINT("Failed to load WebSocket URL configuration or URL is empty.\n");
+        return nullptr;  // Exit if configuration fails or URL is empty
     }
 
-// #endif
-	APP_DBG("[STARTED] gw_task_webrtc_entry\n");
+    if (wsUrl.empty() || wsUrl.find("ws://") != 0) {
+        APP_PRINT("Invalid WebSocket URL provided: %s\n", wsUrl.c_str());
+        return nullptr;
+    }
 
-	while (1) {
-		/* get messge */
+    try {
+        ws->open(wsUrl);
+        this_thread::sleep_for(1s);  // Wait for connection to establish
+
+        if (!isConnected.load()) {
+            APP_PRINT("WebSocket connection failed to establish.\n");
+            return nullptr;  // Exit if WebSocket fails to connect
+        }
+    } catch (const std::exception& e) {
+        APP_PRINT("Exception caught while initializing WebSocket: %s\n", e.what());
+        return nullptr;  // Exit if an exception occurred during WebSocket setup
+    }
+
+    APP_DBG("[STARTED] gw_task_webrtc_entry\n");
+
+    ak_msg_t *msg = nullptr;
+	while (true) {
 		msg = ak_msg_rev(GW_TASK_WEBRTC_ID);
 
-		switch (msg->header->sig) {
-			
-		default:
-		break;
-		}
+		if (msg != nullptr) {
+			// Process the message
+			// Make sure to handle msg content safely and properly here.
 
-		/* free message */
-		ak_msg_free(msg);
+			ak_msg_free(msg);
+		} else {
+			// No message was received, sleep to prevent busy waiting.
+			this_thread::sleep_for(100ms);
+		}
 	}
 
-	return (void *)0;
+    return nullptr;
 }
 
 int8_t loadIceServersConfigFile(Configuration &rtcConfig) {
-	rtcServersConfig_t rtcServerCfg;
-	int8_t ret = configGetRtcServers(&rtcServerCfg);
-	try {
-		if (ret == APP_CONFIG_SUCCESS) {
-			rtcConfig.iceServers.clear();
-
-			APP_DBG("List stun server:\n");
-			string url = "";
-			int size   = rtcServerCfg.arrStunServerUrl.size();
-			for (int idx = 0; idx < size; idx++) {
-				url = rtcServerCfg.arrStunServerUrl.at(idx);
-				APP_DBG("\t[%d] url: %s\n", idx + 1, url.c_str());
-				if (url != "") {
-					rtcConfig.iceServers.emplace_back(url);
-				}
-			}
-			APP_DBG("\n");
-			APP_DBG("List turn server:\n");
-			size = rtcServerCfg.arrTurnServerUrl.size();
-			for (int idx = 0; idx < size; idx++) {
-				url = rtcServerCfg.arrTurnServerUrl.at(idx);
-				APP_DBG("\t[%d] url: %s\n", idx + 1, url.c_str());
-				if (url != "") {
-					rtcConfig.iceServers.emplace_back(url);
-				}
-			}
-			APP_DBG("\n");
-		}
-	}
-	catch (const exception &error) {
-		APP_DBG("loadIceServersConfigFile %s\n", error.what());
-		ret = APP_CONFIG_ERROR_DATA_INVALID;
-	}
-
-	return ret;
+    rtcServersConfig_t rtcServerCfg;
+    int8_t ret = configGetRtcServers(&rtcServerCfg);
+    if (ret == APP_CONFIG_SUCCESS) {
+        rtcConfig.iceServers.clear();
+        for (const auto& url : rtcServerCfg.arrStunServerUrl) {
+            if (!url.empty()) {
+                rtcConfig.iceServers.emplace_back(url);
+            }
+        }
+        for (const auto& url : rtcServerCfg.arrTurnServerUrl) {
+            if (!url.empty()) {
+                rtcConfig.iceServers.emplace_back(url);
+            }
+        }
+    }
+    return ret;
 }
 
 int8_t loadWsocketSignalingServerConfigFile(string &wsUrl) {
-	rtcServersConfig_t rtcServerCfg;
-	int8_t ret = configGetRtcServers(&rtcServerCfg);
-	if (ret == APP_CONFIG_SUCCESS) {
-		wsUrl.clear();
-		if (rtcServerCfg.wSocketServerCfg 	!= "") {
-			wsUrl = rtcServerCfg.wSocketServerCfg + "/" + mtce_getSerialInfo();
-		}
-	}
-	return ret;
+    rtcServersConfig_t rtcServerCfg;
+    int8_t ret = configGetRtcServers(&rtcServerCfg);
+    if (ret == APP_CONFIG_SUCCESS && !rtcServerCfg.wSocketServerCfg.empty()) {
+        wsUrl = rtcServerCfg.wSocketServerCfg + "/" + mtce_getSerialInfo();
+    }
+    return ret;
 }
