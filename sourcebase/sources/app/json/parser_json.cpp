@@ -49,6 +49,13 @@ bool mtce_jsonGetRtcServers(const json &json_in, rtcServersConfig_t *rtcSvCfg) {
                             rtcSvCfg->arrTurnServerUrl.push_back(server["TurnUrl"][0].get<string>());
                         }
                     }
+                } else if (type == "signaling") {
+                    // Extract the signaling URL
+                    if (server.contains("SignalingUrl") && server["SignalingUrl"].is_string()) {
+                        rtcSvCfg->wSocketServerCfg = server["SignalingUrl"].get<string>();
+                    } else {
+                        APP_DBG("Warning: 'SignalingUrl' field is missing or not a string");
+                    }
                 }
             } else {
                 APP_DBG("Warning: 'Type' field is missing or not a string");

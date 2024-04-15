@@ -73,8 +73,13 @@ void *gw_task_webrtc_entry(void *) {
 	ak_msg_t *msg = AK_MSG_NULL;
 
 	wait_all_tasks_started();
-	loadIceServersConfigFile(rtcConfig);
-	rtcConfig.disableAutoNegotiation = false; // use etLocalDescription auto
+	APP_DBG("[STARTED_1] gw_task_webrtc_entry\n");
+    if (loadIceServersConfigFile(rtcConfig) != APP_CONFIG_SUCCESS) {
+        APP_PRINT("Failed to load ICE servers configuration.\n");
+        return AK_MSG_NULL;  // Exit if configuration fails
+    }
+
+    rtcConfig.disableAutoNegotiation = false;  // Set localDescription automatically
 	
 	
 // #ifdef TEST_USE_WEB_SOCKET
@@ -137,21 +142,24 @@ void *gw_task_webrtc_entry(void *) {
     });
 
     ws->onMessage([&](variant<binary, string> data) {
-        if (!holds_alternative<string>(data)) {
-            return;
+        if (holds_alternative<string>(data)) {
+            string msg = get<string>(data);
+            APP_DBG("%s\n", msg.data());
+            task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
         }
-        string msg = get<string>(data);
-        APP_DBG("%s\n", msg.data());
-        task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)msg.data(), msg.length() + 1);
-    });
+	});
 
     std::string wsUrl;
-    loadWsocketSignalingServerConfigFile(wsUrl);
+
 
     // Debugging output
     wsUrl = "ws://sig.espitek.com:8089/" + mtce_getSerialInfo();
     std::cout << "Attempting to connect WebSocket server at URL: " << wsUrl << std::endl;
 
+    if (loadWsocketSignalingServerConfigFile(wsUrl) != APP_CONFIG_SUCCESS || wsUrl.empty()) {
+        APP_PRINT("Failed to load WebSocket URL configuration or URL is empty.\n");
+        return AK_MSG_NULL;  // Exit if configuration fails or URL is empty
+    }
     // Attempt to connect
     ws->open(wsUrl);
 
@@ -223,14 +231,40 @@ int8_t loadIceServersConfigFile(Configuration &rtcConfig) {
 	return ret;
 }
 
+// int8_t loadWsocketSignalingServerConfigFile(string &wsUrl) {
+// 	rtcServersConfig_t rtcServerCfg;
+// 	int8_t ret = configGetRtcServers(&rtcServerCfg);
+// 	if (ret == APP_CONFIG_SUCCESS) {
+// 		wsUrl.clear();
+// 		if (rtcServerCfg.wSocketServerCfg 	!= "") {
+// 			wsUrl = rtcServerCfg.wSocketServerCfg + "/" + mtce_getSerialInfo();
+// 		}
+// 	}
+// 	return ret;
+// }
+
 int8_t loadWsocketSignalingServerConfigFile(string &wsUrl) {
-	rtcServersConfig_t rtcServerCfg;
-	int8_t ret = configGetRtcServers(&rtcServerCfg);
-	if (ret == APP_CONFIG_SUCCESS) {
-		wsUrl.clear();
+    rtcServersConfig_t rtcServerCfg;
+    int8_t ret = configGetRtcServers(&rtcServerCfg);
+    
+    APP_PRINT("[DEBUG] Loading WebSocket Signaling Server Config...\n");
+    
+    if (ret == APP_CONFIG_SUCCESS) {
+        APP_PRINT("[DEBUG] Successfully retrieved RTC server configuration.\n");
+        
+        wsUrl.clear();
+        // if (!rtcServerCfg.wSocketServerCfg.empty()) {
 		if (rtcServerCfg.wSocketServerCfg 	!= "") {
-			wsUrl = rtcServerCfg.wSocketServerCfg + "/" + mtce_getSerialInfo();
-		}
-	}
-	return ret;
+            wsUrl = rtcServerCfg.wSocketServerCfg + "/" + mtce_getSerialInfo();
+            APP_PRINT("[DEBUG] WebSocket URL constructed: %s\n", wsUrl.c_str());
+        } else {
+            APP_PRINT("[ERROR] WebSocket server configuration is empty.\n");
+        }
+    } else {
+        APP_PRINT("[ERROR] Failed to retrieve RTC server configuration. Error code: %d\n", ret);
+    }
+    
+    return ret;
 }
+
+// "Exchange of Offer and Answer"
