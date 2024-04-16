@@ -5,6 +5,8 @@
 #include "message.h"
 
 #include "task_webrtc.h"
+#include "task_hello.h"
+#include "task_cloud.h"
 
 
 /** default if_des_type when get pool memory
@@ -16,6 +18,7 @@ enum {
 	/* SYSTEM TASKS */
 	AK_TASK_TIMER_ID,
 	GW_TASK_WEBRTC_ID,
+	GW_TASK_HELLO_ID,
 	
 	/* EOT task ID */
 	AK_TASK_LIST_LEN,

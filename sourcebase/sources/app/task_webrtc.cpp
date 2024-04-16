@@ -337,9 +337,15 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const st
 	auto client = make_shared<Client>(pc);
 	client->setId(clientId);
 
-    systemTimer.add(milliseconds(100),
-							[clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
-
+    pc->onStateChange([clientId](PeerConnection::State state) {
+        APP_DBG("State: %d\n", (int)state);
+        if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {
+            // remove disconnected client
+            APP_DBG("call erase client from lib\n");
+            systemTimer.add(milliseconds(100),
+                            [clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
+        }
+	});
 	// pc->onStateChange([clientId](PeerConnection::State state) {
 	// 	APP_DBG("State: %d\n", (int)state);
 	// 	if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {

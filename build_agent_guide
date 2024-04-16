@@ -6,9 +6,12 @@
 - build agent version
 	make clean-agent
 	make build-agent
-	cp fpt_agent_1.0.6-2220-I03S-R18N-2024.04.16T09.18.48.bin /tmp/agent/agent.sqsh
-	md5sum fpt_agent_1.0.6-2220-I03S-R18N-2024.04.16T09.18.48.bin
-	echo md5sum=32352fewfgweg32544 > /tmp/agent/version
+	
+	@ mount_environment: /tmp/nfs
+	
+	cp fpt_agent_1.0.6-2220-I03S-R18N-2024.04.16T13.43.06.bin /tmp/agent/agent.sqsh
+	md5sum fpt_agent_1.0.6-2220-I03S-R18N-2024.04.16T13.43.06.bin
+	echo md5sum=1633be676f61115799509b474a04550d > /tmp/agent/version
 	sync
 	reboot
 	
@@ -21,6 +24,8 @@
 	
 mkdir -p /tmp/nfs
 mount -t nfs -o nolock 192.168.1.75:/mnt/nfs_share /tmp/nfs
+
+
 cd /tmp/nfs/test
 export LD_LIBRARY_PATH=/app/lib
 
