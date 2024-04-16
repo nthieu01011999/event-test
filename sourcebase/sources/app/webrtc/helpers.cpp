@@ -113,17 +113,17 @@ Client::State Client::getState() {
 // 	}));
 // }
 
-// void Client::removeTimeoutConnect() {
-// 	int idT = getTimerConnectId();
-// 	if (idT >= 0) {
-// 		systemTimer.remove(idT);
-// 		setTimerConnectId(-1);
-// 	}
-// }
+void Client::removeTimeoutConnect() {
+	int idT = getTimerConnectId();
+	if (idT >= 0) {
+		systemTimer.remove(idT);
+		setTimerConnectId(-1);
+	}
+}
 
-// int Client::getTimerConnectId() {
-// 	return mTimerConnectId;
-// }
+int Client::getTimerConnectId() {
+	return mTimerConnectId;
+}
 
 void Client::setTimerConnectId(size_t newTimerConnectId) {
 	mTimerConnectId = newTimerConnectId;

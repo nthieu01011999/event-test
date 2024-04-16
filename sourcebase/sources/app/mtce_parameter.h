@@ -26,4 +26,11 @@ extern mtce_deviceInfo_t mtce_deviceInfo;
 
 extern int mtce_contextInit();
 
+
+enum {
+	MTCE_MQTT_RESPONE_SUCCESS = 100,
+	MTCE_MQTT_RESPONE_FAILED  = 102,
+	MTCE_MQTT_RESPONE_TIMEOUT = 101,
+};
+
 #endif	  // __MTCE_PARAMETER_H__

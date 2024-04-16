@@ -76,7 +76,7 @@ void onDataChannelStringMessage(const string& clientId, const string& message);
 void sendLocalDescription(const Description &description);
 void sendIceCandidate(const Candidate &candidate);
 
-shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& clientId);
+shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& id);
 
 
 
@@ -169,6 +169,23 @@ void *gw_task_webrtc_entry(void *) {
             // Client::setSignalingStatus(false);
 
             // printAllClients();
+		} break;
+
+		case GW_WEBRTC_ON_MESSAGE_CONTROL_DATACHANNEL_REQ: {
+			APP_DBG_SIG("GW_WEBRTC_ON_MESSAGE_CONTROL_DATACHANNEL_REQ\n");
+			// try {
+			// 	json message = json::parse(string((char *)msg->header->payload, msg->header->len));
+			// 	string id	 = message["ClientId"].get<string>();
+			// 	string data	 = message["Data"].get<string>();
+			// 	string resp	 = "";
+			// 	APP_DBG("client id: %s, msg: %s\n", id.c_str(), data.c_str());
+			// 	onDataChannelHdl(id, data, resp);
+			// 	sendMsgControlDataChannel(id, resp);
+			// }
+			// catch (const exception &error) {
+			// 	APP_DBG("%s\n", error.what());
+			// }
+			// APP_DBG("end datachannel handle\n");
 		} break;
 			
 		default:
@@ -331,66 +348,140 @@ void handleClientRequest(const std::string& clientId) {
 }
 
 
-shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& clientId) {
-    APP_DBG("[NEW] Starting to create PeerConnection for client ID: %s\n", clientId.c_str());
-    auto pc		= make_shared<PeerConnection>(rtcConfig);
-	auto client = make_shared<Client>(pc);
-	client->setId(clientId);
+// shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& clientId) {
+//     APP_DBG("[NEW] Starting to create PeerConnection for client ID: %s\n", clientId.c_str());
+//     auto pc		= make_shared<PeerConnection>(rtcConfig);
+// 	auto client = make_shared<Client>(pc);
+// 	client->setId(clientId);
 
-    pc->onStateChange([clientId](PeerConnection::State state) {
-        APP_DBG("State: %d\n", (int)state);
-        if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {
-            // remove disconnected client
-            APP_DBG("call erase client from lib\n");
-            systemTimer.add(milliseconds(100),
-                            [clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
-        }
+//     pc->onStateChange([clientId](PeerConnection::State state) {
+//         APP_DBG("State: %d\n", (int)state);
+//         if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {
+//             // remove disconnected client
+//             APP_DBG("call erase client from lib\n");
+//             systemTimer.add(milliseconds(100),
+//                             [clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
+//         }
+// 	});
+
+// 	pc->onGatheringStateChange([wpc = make_weak_ptr(pc), clientId](PeerConnection::GatheringState state) {
+// 		APP_DBG("Gathering State: %d\n", (int)state);
+// 		if (state == PeerConnection::GatheringState::Complete) {
+// 			if (auto pc = wpc.lock()) {
+// 				auto description = pc->localDescription();
+// 				json message	 = {
+// 					{"Data",	 {{"Type", description->typeString()}, {"Sdp", string(description.value())}, {"ClientId", clientId}}},
+// 					{"Result", {{"Ret", MTCE_MQTT_RESPONE_SUCCESS}, {"Message", "Success"}}								   }
+// 				};
+// 				task_post_dynamic_msg(GW_TASK_HELLO_ID, GW_CLOUD_SIGNALING_MQTT_RES, (uint8_t *)message.dump().data(), message.dump().length() + 1);
+// 			}
+// 		}
+// 	});
+//     return client;
+// }
+
+shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& id) {
+	APP_DBG("call createPeerConnection()\n");
+	auto pc		= make_shared<PeerConnection>(rtcConfig);
+	auto client = make_shared<Client>(pc);
+	client->setId(id);
+
+	pc->onStateChange([id](PeerConnection::State state) {
+		APP_DBG("State: %d\n", (int)state);
+		if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {
+			// remove disconnected client
+			APP_DBG("call erase client from lib\n");
+			systemTimer.add(milliseconds(100),
+							[id](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)id.c_str(), id.length() + 1); });
+		}
 	});
 
-    task_post_dynamic_msg(GW_TASK_HELLO_ID, GW_HELLO_PRINT, (uint8_t *)clientId.c_str(), clientId.length() + 1);
-	// pc->onStateChange([clientId](PeerConnection::State state) {
-	// 	APP_DBG("State: %d\n", (int)state);
-	// 	if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {
-	// 		// remove disconnected client
-	// 		APP_DBG("call erase client from lib\n");
-	// 		systemTimer.add(milliseconds(100),
-	// 						[clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
-	// 	}
-	// });
-    // // Create a new PeerConnection with the given configuration
-    // auto peerConnection = make_shared<PeerConnection>(rtcConfig);
-    
-    // // Set up event handlers for the PeerConnection
-    // peerConnection->onStateChange([clientId](PeerConnection::State state) {
-    //     APP_DBG("PeerConnection state change for client %s: %d\n", clientId.c_str(), static_cast<int>(state));
-    //     onPeerConnectionStateChange(clientId, state);
-    // });
+	pc->onGatheringStateChange([wpc = make_weak_ptr(pc), id](PeerConnection::GatheringState state) {
+		APP_DBG("Gathering State: %d\n", (int)state);
+		if (state == PeerConnection::GatheringState::Complete) {
+			if (auto pc = wpc.lock()) {
+				auto description = pc->localDescription();
+				json message	 = {
+					{"Data",	 {{"Type", description->typeString()}, {"Sdp", string(description.value())}, {"ClientId", id}}},
+					{"Result", {{"Ret", MTCE_MQTT_RESPONE_SUCCESS}, {"Message", "Success"}}								   }
+				};
+				task_post_dynamic_msg(GW_TASK_HELLO_ID, GW_CLOUD_SIGNALING_MQTT_RES, (uint8_t *)message.dump().data(), message.dump().length() + 1);
+			}
+		}
+	});
 
-    // // Create and configure a new DataChannel
-    // auto dataChannel = peerConnection->createDataChannel("control");
-    // dataChannel->onOpen([clientId]() {
-    //     APP_DBG("DataChannel opened for client %s\n", clientId.c_str());
-    //     onDataChannelOpen(clientId);
-    // });
+// #if BUILD_ARM_VVTK
+// 	client->video = addVideo(pc, 102, 1, "VideoStream", "Stream", [id, wc = make_weak_ptr(client)]() {	  // TODO add peer sergment fault
+// 		if (auto c = wc.lock()) {
+// 			addToStream(c, true);
+// 		}
+// 		APP_DBG("Video from %s opened\n", id.c_str());
+// 	});
 
-    // dataChannel->onMessage([clientId](variant<binary, string> message) {
-    //     if (holds_alternative<binary>(message)) {
-    //         onDataChannelMessage(clientId, get<binary>(message));
-    //     } else if (holds_alternative<string>(message)) {
-    //         onDataChannelStringMessage(clientId, get<string>(message));
-    //     }
-    // });
+// 	client->audio = addAudio(
+// 		pc, 8, 2, "AudioStream", "Stream",
+// 		[id, wc = make_weak_ptr(client)]() {
+// 			if (auto c = wc.lock()) {
+// 				addToStream(c, false);
+// 			}
+// 			APP_DBG("Audio from %s opened\n", id.c_str());
+// 		},
+// 		id);
+// #endif
 
-    // // Create a Client object that encapsulates the PeerConnection and the DataChannel
-    // auto client = make_shared<Client>(peerConnection);
-    // client->setId(clientId);
-    // client->dataChannel = dataChannel;
+	auto dc = pc->createDataChannel("control");
+	dc->onOpen([id, wcl = make_weak_ptr(client)]() {
+		if (auto cl = wcl.lock()) {
+			auto dc = cl->dataChannel.value();
+			APP_DBG("open channel label: %s success\n", dc->label().c_str());
+			dc->send("Hello from " + mtce_getSerialInfo());
+			APP_DBG("remove timeout connect\n");
+			cl->removeTimeoutConnect();
+			cl->mIsSignalingOk = true;
+			if (++Client::totalClientsConnectSuccess > CLIENT_MAX) {
+				APP_DBG("Client::totalClientsConnectSuccess > %d\n", CLIENT_MAX);
+				FATAL("RTC", 0x01);
+			}
+			APP_DBG("total client: %d\n", Client::totalClientsConnectSuccess.load());
 
-    // APP_DBG("PeerConnection and DataChannel setup complete for client %s\n", clientId.c_str());
+			auto pc = cl->peerConnection;
+			Candidate iceCam, iceApp;
+			if (pc->getSelectedCandidatePair(&iceCam, &iceApp)) {
+				APP_DBG("local candidate selected: %s, transport type: %d\n", iceCam.candidate().c_str(), iceCam.transportType());
+				APP_DBG("remote candidate selected: %s, transport type: %d\n", iceApp.candidate().c_str(), iceApp.transportType());
+			}
+			else {
+				APP_DBG("get selected candidate pair failed\n");
+			}
+		}
+	});
 
-    return client;
-}
+	dc->onClosed([id, wdc = make_weak_ptr(dc)]() {
+		if (auto dc = wdc.lock()) {
+			APP_DBG("DataChannel label: %s from: %s closed\n", dc->label().c_str(), id.c_str());
+		}
+	});
 
+	dc->onMessage([id](auto data) {
+		// data holds either string or rtc::binaryL
+		if (holds_alternative<string>(data)) {
+			json dataRev = {
+				{"ClientId", id			   },
+				  {"Data",	   get<string>(data)}
+			 };
+			task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ON_MESSAGE_CONTROL_DATACHANNEL_REQ, (uint8_t *)dataRev.dump().c_str(), dataRev.dump().length() + 1);
+		}
+		else {
+			APP_DBG("Binary message from %s received, size= %d\n", id.c_str(), get<rtc::binary>(data).size());
+		}
+	});
+
+	dc->onBufferedAmountLow([id]() { APP_DBG("clientId %s send done\n", id.c_str()); });
+	client->dataChannel = dc;
+
+	// pc->setLocalDescription();
+	return client;
+};
 // void onPeerConnectionStateChange(const string& clientId, PeerConnection::State state) {
 //     // Logic for when the PeerConnection's state changes
 //     APP_DBG("Client %s PeerConnection state changed: %d\n", clientId.c_str(), static_cast<int>(state));

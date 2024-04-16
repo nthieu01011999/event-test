@@ -36,6 +36,32 @@ void *gw_task_hello_entry(void *) {
 		case GW_HELLO_PRINT: {
 			APP_DBG_SIG("GW_HELLO_PRINTGW_HELLO_PRINTGW_HELLO_PRINTGW_HELLO_PRINT\n");
 		} break;
+
+		case GW_CLOUD_SIGNALING_MQTT_RES: {
+			APP_DBG_SIG("GW_CLOUD_SIGNALING_MQTT_RES\n");
+			try {
+				json revJs = json::parse(string((char *)msg->header->payload, msg->header->len));
+				json resJs = {
+					{"Method",	   "ACT"				},
+					{"MessageType", "Signaling"			},
+					{"Serial",	  mtce_getSerialInfo()},
+					{"Data",		 revJs["Data"]		  },
+					{"Result",		revJs["Result"]	   },
+					{"Timestamp",	 time(nullptr)		  }
+				   };
+
+				APP_DBG("signaling report: %s\n", resJs.dump().data());
+				/* response to mqtt server */
+				// if (mospp) {
+				// 	mospp->publishSignalingResponse(resJs);
+				// 	// mospp->publishResponse(resJs);	  // TODO clear when RELEASE
+				// }
+			}
+			catch (const exception &error) {
+				APP_DBG("%s\n", error.what());
+			}
+		} break;
+
 		default:
 			break;
 		}
