@@ -6,7 +6,7 @@
 
 #include "task_webrtc.h"
 #include "task_hello.h"
-#include "task_cloud.h"
+// #include "task_cloud.h"
 
 
 /** default if_des_type when get pool memory

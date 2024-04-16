@@ -21,7 +21,7 @@ void *gw_task_hello_entry(void *) {
 
     APP_DBG("[STARTED] gw_task_hello_entry\n");
 
-	ak_msg_t *msg;
+	ak_msg_t *msg = AK_MSG_NULL;
 
 	// load config here
 
@@ -32,6 +32,10 @@ void *gw_task_hello_entry(void *) {
 		msg = ak_msg_rev(GW_TASK_HELLO_ID);
 
 		switch (msg->header->sig) {
+
+		case GW_HELLO_PRINT: {
+			APP_DBG_SIG("GW_HELLO_PRINTGW_HELLO_PRINTGW_HELLO_PRINTGW_HELLO_PRINT\n");
+		} break;
 		default:
 			break;
 		}
