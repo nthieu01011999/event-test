@@ -158,6 +158,18 @@ void *gw_task_webrtc_entry(void *) {
 		msg = ak_msg_rev(GW_TASK_WEBRTC_ID);
 
 		switch (msg->header->sig) {
+        case GW_WEBRTC_ERASE_CLIENT_REQ: {
+            APP_DBG_SIG("GW_WEBRTC_ERASE_CLIENT_REQ\n");
+            // string id((char *)msg->header->payload);
+            // APP_PRINT("clear client id: %s\n", id.c_str());
+            // Client::setSignalingStatus(true);
+            // lockMutexListClients();
+            // clients.erase(id);
+            // unlockMutexListClients();
+            // Client::setSignalingStatus(false);
+
+            // printAllClients();
+		} break;
 			
 		default:
 		break;
@@ -320,57 +332,72 @@ void handleClientRequest(const std::string& clientId) {
 
 
 shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& clientId) {
-    APP_DBG("Starting to create PeerConnection for client ID: %s\n", clientId.c_str());
+    APP_DBG("[NEW] Starting to create PeerConnection for client ID: %s\n", clientId.c_str());
+    auto pc		= make_shared<PeerConnection>(rtcConfig);
+	auto client = make_shared<Client>(pc);
+	client->setId(clientId);
 
-    // Create a new PeerConnection with the given configuration
-    auto peerConnection = make_shared<PeerConnection>(rtcConfig);
+    systemTimer.add(milliseconds(100),
+							[clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
+
+	// pc->onStateChange([clientId](PeerConnection::State state) {
+	// 	APP_DBG("State: %d\n", (int)state);
+	// 	if (state == PeerConnection::State::Disconnected || state == PeerConnection::State::Failed || state == PeerConnection::State::Closed) {
+	// 		// remove disconnected client
+	// 		APP_DBG("call erase client from lib\n");
+	// 		systemTimer.add(milliseconds(100),
+	// 						[clientId](CppTime::timer_id) { task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_ERASE_CLIENT_REQ, (uint8_t *)clientId.c_str(), clientId.length() + 1); });
+	// 	}
+	// });
+    // // Create a new PeerConnection with the given configuration
+    // auto peerConnection = make_shared<PeerConnection>(rtcConfig);
     
-    // Set up event handlers for the PeerConnection
-    peerConnection->onStateChange([clientId](PeerConnection::State state) {
-        APP_DBG("PeerConnection state change for client %s: %d\n", clientId.c_str(), static_cast<int>(state));
-        onPeerConnectionStateChange(clientId, state);
-    });
+    // // Set up event handlers for the PeerConnection
+    // peerConnection->onStateChange([clientId](PeerConnection::State state) {
+    //     APP_DBG("PeerConnection state change for client %s: %d\n", clientId.c_str(), static_cast<int>(state));
+    //     onPeerConnectionStateChange(clientId, state);
+    // });
 
-    // Create and configure a new DataChannel
-    auto dataChannel = peerConnection->createDataChannel("control");
-    dataChannel->onOpen([clientId]() {
-        APP_DBG("DataChannel opened for client %s\n", clientId.c_str());
-        onDataChannelOpen(clientId);
-    });
+    // // Create and configure a new DataChannel
+    // auto dataChannel = peerConnection->createDataChannel("control");
+    // dataChannel->onOpen([clientId]() {
+    //     APP_DBG("DataChannel opened for client %s\n", clientId.c_str());
+    //     onDataChannelOpen(clientId);
+    // });
 
-    dataChannel->onMessage([clientId](variant<binary, string> message) {
-        if (holds_alternative<binary>(message)) {
-            onDataChannelMessage(clientId, get<binary>(message));
-        } else if (holds_alternative<string>(message)) {
-            onDataChannelStringMessage(clientId, get<string>(message));
-        }
-    });
+    // dataChannel->onMessage([clientId](variant<binary, string> message) {
+    //     if (holds_alternative<binary>(message)) {
+    //         onDataChannelMessage(clientId, get<binary>(message));
+    //     } else if (holds_alternative<string>(message)) {
+    //         onDataChannelStringMessage(clientId, get<string>(message));
+    //     }
+    // });
 
-    // Create a Client object that encapsulates the PeerConnection and the DataChannel
-    auto client = make_shared<Client>(peerConnection);
-    client->setId(clientId);
-    client->dataChannel = dataChannel;
+    // // Create a Client object that encapsulates the PeerConnection and the DataChannel
+    // auto client = make_shared<Client>(peerConnection);
+    // client->setId(clientId);
+    // client->dataChannel = dataChannel;
 
-    APP_DBG("PeerConnection and DataChannel setup complete for client %s\n", clientId.c_str());
+    // APP_DBG("PeerConnection and DataChannel setup complete for client %s\n", clientId.c_str());
 
     return client;
 }
 
-void onPeerConnectionStateChange(const string& clientId, PeerConnection::State state) {
-    // Logic for when the PeerConnection's state changes
-    APP_DBG("Client %s PeerConnection state changed: %d\n", clientId.c_str(), static_cast<int>(state));
-}
+// void onPeerConnectionStateChange(const string& clientId, PeerConnection::State state) {
+//     // Logic for when the PeerConnection's state changes
+//     APP_DBG("Client %s PeerConnection state changed: %d\n", clientId.c_str(), static_cast<int>(state));
+// }
 
-void onDataChannelOpen(const string& clientId) {
-    // Logic for when the DataChannel is open
-    APP_DBG("DataChannel for client %s is open\n", clientId.c_str());
-}
+// void onDataChannelOpen(const string& clientId) {
+//     // Logic for when the DataChannel is open
+//     APP_DBG("DataChannel for client %s is open\n", clientId.c_str());
+// }
 
-void onDataChannelMessage(const string& clientId, const binary& data) {
-    // Logic for when a message is received on the DataChannel
-    APP_DBG("Message received from client %s on DataChannel\n", clientId.c_str());
-}
+// void onDataChannelMessage(const string& clientId, const binary& data) {
+//     // Logic for when a message is received on the DataChannel
+//     APP_DBG("Message received from client %s on DataChannel\n", clientId.c_str());
+// }
 
-void onDataChannelStringMessage(const string& clientId, const string& message) {
-    APP_DBG("String message received from client %s: %s\n", clientId.c_str(), message.c_str());
-}
+// void onDataChannelStringMessage(const string& clientId, const string& message) {
+//     APP_DBG("String message received from client %s: %s\n", clientId.c_str(), message.c_str());
+// }
