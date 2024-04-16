@@ -73,6 +73,8 @@ void onPeerConnectionStateChange(const string& clientId, PeerConnection::State s
 void onDataChannelOpen(const string& clientId);
 void onDataChannelMessage(const string& clientId, const binary& data);
 void onDataChannelStringMessage(const string& clientId, const string& message);
+void sendLocalDescription(const Description &description);
+void sendIceCandidate(const Candidate &candidate);
 
 shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& clientId);
 
@@ -317,46 +319,41 @@ void handleClientRequest(const std::string& clientId) {
 }
 
 
-
-// shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, string id) {
-// 	APP_DBG("THE END: createPeerConnection\n");
-	
-// }
-
 shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& clientId) {
+    APP_DBG("Starting to create PeerConnection for client ID: %s\n", clientId.c_str());
+
     // Create a new PeerConnection with the given configuration
-	APP_DBG("THE END: createPeerConnection\n");
-	
-	auto client = make_shared<Client>(pc);
     auto peerConnection = make_shared<PeerConnection>(rtcConfig);
-	
+    
     // Set up event handlers for the PeerConnection
     peerConnection->onStateChange([clientId](PeerConnection::State state) {
-        // Handle state change
+        APP_DBG("PeerConnection state change for client %s: %d\n", clientId.c_str(), static_cast<int>(state));
         onPeerConnectionStateChange(clientId, state);
     });
 
-    // Create a new DataChannel or handle an incoming one
+    // Create and configure a new DataChannel
     auto dataChannel = peerConnection->createDataChannel("control");
-
     dataChannel->onOpen([clientId]() {
-        // DataChannel is open
+        APP_DBG("DataChannel opened for client %s\n", clientId.c_str());
         onDataChannelOpen(clientId);
     });
 
-	dataChannel->onMessage([clientId](variant<binary, string> message) {
-		if (holds_alternative<binary>(message)) {
-			onDataChannelMessage(clientId, get<binary>(message));
-		} else if (holds_alternative<string>(message)) {
-			onDataChannelStringMessage(clientId, get<string>(message));
-		}
-	});
+    dataChannel->onMessage([clientId](variant<binary, string> message) {
+        if (holds_alternative<binary>(message)) {
+            onDataChannelMessage(clientId, get<binary>(message));
+        } else if (holds_alternative<string>(message)) {
+            onDataChannelStringMessage(clientId, get<string>(message));
+        }
+    });
 
-    // Handle other PeerConnection events as needed, such as onGatheringStateChange, onTrack, etc.
+    // Create a Client object that encapsulates the PeerConnection and the DataChannel
+    auto client = make_shared<Client>(peerConnection);
+    client->setId(clientId);
+    client->dataChannel = dataChannel;
 
-    // Assuming Client is a class that wraps around PeerConnection and possibly more data
-    // return make_shared<Client>(peerConnection, dataChannel);
-	return client;
+    APP_DBG("PeerConnection and DataChannel setup complete for client %s\n", clientId.c_str());
+
+    return client;
 }
 
 void onPeerConnectionStateChange(const string& clientId, PeerConnection::State state) {

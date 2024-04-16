@@ -1,0 +1,39 @@
+- internet
+	"no internet connection"
+	ifconfig eth0 up
+	udhcpc
+	
+- build agent version
+	make clean-agent
+	make build-agent
+	cp fpt_agent_1.0.6-2220-I03S-R18N-2024.04.16T09.18.48.bin /tmp/agent/agent.sqsh
+	md5sum fpt_agent_1.0.6-2220-I03S-R18N-2024.04.16T09.18.48.bin
+	echo md5sum=32352fewfgweg32544 > /tmp/agent/version
+	sync
+	reboot
+	
+- build linux_vvtk.bin
+	./vvtkota linux_vvtk.bin
+	
+	
+	
+	
+	
+mkdir -p /tmp/nfs
+mount -t nfs -o nolock 192.168.1.75:/mnt/nfs_share /tmp/nfs
+cd /tmp/nfs/test
+export LD_LIBRARY_PATH=/app/lib
+
+
+./fcam-I03S-debug
+
+
+
+
+
+
+
+
+it@it-ThinkCentre-neo-50s-Gen-3:~/Downloads/event-test/sourcebase$ make clean-agent 
+rm -rf ../firmware
+it@it-ThinkCentre-neo-50s-Gen-3:~/Downloads/event-test/sourcebase$ make build-agent

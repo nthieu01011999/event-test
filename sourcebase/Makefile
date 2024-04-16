@@ -283,6 +283,7 @@ build-agent: check agent-cp #generate_script
 
 	@echo "\033[1;32mBuild model [$(FW_MODEL)]\033[0m"
 
+	cp $(BUILD_DIR)/* /mnt/nfs_share
 #scp $(BUILD_DIR)/* huynt@192.168.1.141:/home/huynt/Workspace/FPT/Github/Camera/vvtk_nfs
 # cp $(BUILD_DIR)/* /mnt/hgfs/shareFd/
 #sudo cp $(BUILD_DIR)/* /mnt/nfs-host/vivotek/firmware/
@@ -322,8 +323,8 @@ build-release: check
         echo "cp -r $(BUILD_DIR)/fpt_agent_$$file_name $(RELEASE_DIR)/$(RELEASE_MODEL)/agent.sqsh"; \
 		cp -r $(BUILD_DIR)/fpt_agent_$$file_name $(RELEASE_DIR)/$(RELEASE_MODEL)/agent.sqsh;\
 		\
-		echo "../vvtk_pack -o $(RELEASE_DIR)/$(RELEASE_MODEL)/linux_vvtk.bin -r $(HAL_OTA_DIR)/linux_ota.bin -f $(RELEASE_DIR)/$(RELEASE_MODEL)/agent.sqsh"; \
-		../vvtk_pack -o $(RELEASE_DIR)/$(RELEASE_MODEL)/linux_vvtk.bin -r $(HAL_OTA_DIR)/linux_ota.bin -f $(RELEASE_DIR)/$(RELEASE_MODEL)/agent.sqsh; \
+		echo "../vvtk_fwpack -o $(RELEASE_DIR)/$(RELEASE_MODEL)/linux_vvtk.bin -r $(HAL_OTA_DIR)/linux_ota.bin -f $(RELEASE_DIR)/$(RELEASE_MODEL)/agent.sqsh"; \
+		../vvtk_fwpack -o $(RELEASE_DIR)/$(RELEASE_MODEL)/linux_vvtk.bin -r $(HAL_OTA_DIR)/linux_ota.bin -f $(RELEASE_DIR)/$(RELEASE_MODEL)/agent.sqsh; \
 		\
 		echo "cp $(RELEASE_DIR)/$(RELEASE_MODEL)/linux_vvtk.bin $(RELEASE_DIR)/$(RELEASE_MODEL)/$$file_name"; \
 		cp $(RELEASE_DIR)/$(RELEASE_MODEL)/linux_vvtk.bin $(RELEASE_DIR)/$(RELEASE_MODEL)/$$file_name; \
