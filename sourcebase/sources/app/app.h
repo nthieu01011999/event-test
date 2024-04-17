@@ -39,6 +39,7 @@ enum {
 	GW_WEBRTC_RELEASE_CLIENT_PUSH_TO_TALK,
 
 	GW_HELLO_PRINT,
+	GW_WEBRTC_ICE_CANDIDATE,
 };
 
 /*****************************************************************************/
