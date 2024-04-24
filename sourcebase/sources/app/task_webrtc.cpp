@@ -67,9 +67,11 @@ std::shared_ptr<WebSocket> globalWebSocket;
 
 static Configuration rtcConfig;
 static int8_t loadIceServersConfigFile(Configuration &rtcConfig);
-void handleWebSocketMessage(const std::string& message);
+// void handleWebSocketMessage(const std::string& message);
+void handleWebSocketMessage(const std::string& message, std::shared_ptr<WebSocket> ws);
 // shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, string id);
-void handleClientRequest(const std::string& clientId);
+// void handleClientRequest(const std::string& clientId);
+void handleClientRequest(const std::string& clientId, std::shared_ptr<WebSocket> ws);
 void onPeerConnectionStateChange(const string& clientId, PeerConnection::State state);
 void onDataChannelOpen(const string& clientId);
 void onDataChannelMessage(const string& clientId, const binary& data);
@@ -122,7 +124,7 @@ void *gw_task_webrtc_entry(void *) {
 		if (holds_alternative<string>(data)) {
 			string msg = get<string>(data);
 			APP_DBG("%s\n", msg.data());
-			handleWebSocketMessage(msg);  // Pass the message to the handler
+			handleWebSocketMessage(msg, ws);  // Pass the message to the handler
 			// If needed, you can post the message here as well, depending on your application's architecture.
 		}
 	});
@@ -271,8 +273,15 @@ int8_t loadWsocketSignalingServerConfigFile(string &wsUrl) {
 }
 
 // "Exchange of Offer and Answer"
-void handleWebSocketMessage(const std::string& message) {
+void handleWebSocketMessage(const std::string& message, std::shared_ptr<WebSocket> ws) {
     APP_DBG("[WebSocket Message Received]: %s\n", message.c_str());
+
+    if (ws && ws->isOpen()) {
+        // It is safe to use 'ws' here
+    } else {
+        APP_DBG("WebSocket is not open or not available.\n");
+        // Handle the error or attempt to reconnect
+    }
 
     try {
         json messageJson = json::parse(message);
@@ -290,7 +299,7 @@ void handleWebSocketMessage(const std::string& message) {
                     APP_DBG("Handling request for Client ID: %s\n", clientId.c_str());
 
                     // Handle the client's request, e.g., create a new peer connection
-                    handleClientRequest(clientId);
+                    handleClientRequest(clientId, ws);
                 } else {
                     APP_DBG("Error: ClientId not found in request message\n");
                 }
@@ -318,16 +327,16 @@ void handleWebSocketMessage(const std::string& message) {
     task_post_dynamic_msg(GW_TASK_WEBRTC_ID, GW_WEBRTC_SIGNALING_SOCKET_REQ, (uint8_t *)message.data(), message.length() + 1);
 }
 
-void handleClientRequest(const std::string& clientId) {
+void handleClientRequest(const std::string& clientId, std::shared_ptr<WebSocket> ws) {
     APP_DBG("Initiating peer connection for Client ID: %s\n", clientId.c_str());
 
     // Check client limits
     if (Client::totalClientsConnectSuccess <= CLIENT_MAX && clients.size() <= CLIENT_SIGNALING_MAX) {
         Client::setSignalingStatus(true);
         APP_DBG("Client limits OK, proceeding to create peer connection\n");
-		auto ws = make_shared<WebSocket>(); // This should be managed globally or outside this function
-        weak_ptr<WebSocket> wws = ws; // Convert shared_ptr to weak_ptr
-        // Create a new peer connection for the client
+		// auto ws = make_shared<WebSocket>(); // This should be managed globally or outside this function
+        // weak_ptr<WebSocket> wws = ws; // Convert shared_ptr to weak_ptr
+        // // Create a new peer connection for the client
         std::shared_ptr<Client> newClient = createPeerConnection(rtcConfig, make_weak_ptr(ws), clientId);
         lockMutexListClients();
         clients.emplace(clientId, newClient);
@@ -367,65 +376,52 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 		}
 	});
 
-	// pc->onGatheringStateChange([wpc = make_weak_ptr(pc), id, wws](PeerConnection::GatheringState state) {
-	// 	APP_DBG("Gathering State: %d\n", static_cast<int>(state));
-	// 	if (state == PeerConnection::GatheringState::Complete) {
-	// 		if (auto pc = wpc.lock()) {
-	// 			auto description = pc->localDescription();
-	// 			json message = {
-	// 				{"ClientId", id},
-	// 				{"Type", description->typeString()},
-	// 				{"Sdp", string(description.value())}
-	// 			};
-			
-	// 			APP_DBG("[BEFORE] Sent SDP to WebSocket: %s\n", message.dump().c_str());
-
-	// 			// Gathering complete, send answer
-	// 			if (auto ws = wws.lock()) {
-	// 				APP_DBG("WebSocket is alive, preparing to send message for client ID: %s\n", id.c_str());
-	// 				ws->send(message.dump());
-	// 				// Print out the message that has been sent
-	// 				APP_DBG("Sent SDP to WebSocket: %s\n", message.dump().c_str());
-	// 			}
-	// 			else
-	// 				APP_DBG("ERRRRRRRRRRRRRRRRRRRRRRRRRRRO");
-	// 		}
-	// 	}
-	// });
 	pc->onGatheringStateChange([wpc = make_weak_ptr(pc), id, wws](PeerConnection::GatheringState state) {
 	APP_DBG("Gathering State: %d\n", static_cast<int>(state));
-	try {
-		if (state == PeerConnection::GatheringState::Complete) {
-		APP_DBG("Gathering complete, about to lock weak_ptr\n");
-		if (auto pc = wpc.lock()) {
-			APP_DBG("Locked weak_ptr, getting local description\n");
-			auto description = pc->localDescription();
-			if (description) {
-			json message = {
-				{"ClientId", id},
-				{"Type", description->typeString()},
-				{"Sdp", string(description.value())}
-			};
-			
-			APP_DBG("[BEFORE] Sent SDP to WebSocket: %s\n", message.dump().c_str());
-			if (auto ws = wws.lock()) {
-				APP_DBG("WebSocket is alive, sending message\n");
-				ws->send(message.dump());
-				APP_DBG("Sent SDP to WebSocket: %s\n", message.dump().c_str());
-			} else {
-				APP_DBG("WebSocket weak_ptr expired\n");
-			}
-			} else {
-			APP_DBG("Failed to get local description\n");
+	if (state == PeerConnection::GatheringState::Complete) {
+		auto pc = wpc.lock();
+		if (!pc) {
+			APP_DBG("PeerConnection weak_ptr expired for client: %s.\n", id.c_str());
+			return;
+		}
+
+		auto description = pc->localDescription();
+		if (!description) {
+			APP_DBG("Failed to get local description for client: %s.\n", id.c_str());
+			return;
+		}
+
+		json message = {
+			{"ClientId", id},
+			{"Type", description->typeString()},
+			{"Sdp", string(description.value())}
+		};
+
+		APP_DBG("[BEFORE] Sent SDP to WebSocket: %s\n", message.dump().c_str());
+
+		// Check if the WebSocket pointer is still valid
+		if (auto ws = wws.lock()) {
+			try {
+				// Check if the WebSocket connection is open
+				if (ws->isOpen()) { // Hypothetical function to check connection status
+					APP_DBG("WebSocket is alive, sending message\n");
+					ws->send(message.dump());
+					APP_DBG("Sent SDP to WebSocket for client: %s.\n", id.c_str());
+				} else {
+					APP_DBG("WebSocket is not open for client: %s.\n", id.c_str());
+					// Implement reconnection or error handling logic here
+				}
+			} catch (const std::exception& e) {
+				APP_DBG("Exception while sending message for client: %s: %s\n", id.c_str(), e.what());
+				// Implement error handling logic here
 			}
 		} else {
-			APP_DBG("PeerConnection weak_ptr expired\n");
+			APP_DBG("WebSocket weak_ptr expired for client: %s.\n", id.c_str());
+			// Implement reconnection or error handling logic here
 		}
-		}
-	} catch (const std::exception& e) {
-		APP_DBG("Exception in onGatheringStateChange: %s\n", e.what());
 	}
 	});
+
 
 
 	pc->onLocalCandidate([id, wpc = make_weak_ptr(pc)](const Candidate &candidate) {
