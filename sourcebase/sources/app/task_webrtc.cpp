@@ -63,6 +63,7 @@ std::shared_ptr<PeerConnection> pc = nullptr;  // AK_MSG_NULL has been did with 
 
 static int8_t loadWsocketSignalingServerConfigFile(string &wsUrl);
 // #endif
+std::shared_ptr<WebSocket> globalWebSocket;
 
 static Configuration rtcConfig;
 static int8_t loadIceServersConfigFile(Configuration &rtcConfig);
@@ -76,7 +77,7 @@ void onDataChannelStringMessage(const string& clientId, const string& message);
 void sendLocalDescription(const Description &description);
 void sendIceCandidate(const Candidate &candidate);
 
-shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& id);
+shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr<WebSocket> wws, const string& id);
 
 
 
@@ -94,7 +95,7 @@ void *gw_task_webrtc_entry(void *) {
 	
     /* init websocket */
     auto ws = make_shared<WebSocket>(); // init poll service and threadpool = 4
-
+	weak_ptr<WebSocket> wws = ws;
     // Guard flag to check WebSocket connection status
     atomic<bool> isConnected(false);
 
@@ -141,7 +142,7 @@ void *gw_task_webrtc_entry(void *) {
     ws->open(wsUrl);
 
     // Wait a bit to see if the connection succeeds (or modify based on your app logic)
-    std::this_thread::sleep_for(3s); // Adjust the timing as necessary
+    std::this_thread::sleep_for(1s); // Adjust the timing as necessary
 
     // Check the connection status
     if (isConnected.load()) {
@@ -324,9 +325,10 @@ void handleClientRequest(const std::string& clientId) {
     if (Client::totalClientsConnectSuccess <= CLIENT_MAX && clients.size() <= CLIENT_SIGNALING_MAX) {
         Client::setSignalingStatus(true);
         APP_DBG("Client limits OK, proceeding to create peer connection\n");
-
+		auto ws = make_shared<WebSocket>(); // This should be managed globally or outside this function
+        weak_ptr<WebSocket> wws = ws; // Convert shared_ptr to weak_ptr
         // Create a new peer connection for the client
-        std::shared_ptr<Client> newClient = createPeerConnection(rtcConfig, clientId);
+        std::shared_ptr<Client> newClient = createPeerConnection(rtcConfig, make_weak_ptr(ws), clientId);
         lockMutexListClients();
         clients.emplace(clientId, newClient);
         // printAllClients();
@@ -340,8 +342,15 @@ void handleClientRequest(const std::string& clientId) {
     }
 }
 
-shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const string& id) {
-	
+shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr<WebSocket> wws, const string& id) {
+	if (wws.expired()) {
+		APP_DBG("WebSocket pointer expired before creating PeerConnection for client ID: %s\n", id.c_str());
+		// Handle the expired case (e.g., throw an exception or return a nullptr)
+		return nullptr;
+	}
+	else
+		APP_DBG("[ALIVE]\n");
+
 	APP_DBG("call createPeerConnection()\n");
 	auto pc = make_shared<PeerConnection>(rtcConfig);
 	APP_DBG("PeerConnection created successfully.\n"); // Add this line to confirm creation
@@ -358,19 +367,66 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const st
 		}
 	});
 
-	pc->onGatheringStateChange([wpc = make_weak_ptr(pc), id](PeerConnection::GatheringState state) {
-		APP_DBG("Gathering State: %d\n", (int)state);
+	// pc->onGatheringStateChange([wpc = make_weak_ptr(pc), id, wws](PeerConnection::GatheringState state) {
+	// 	APP_DBG("Gathering State: %d\n", static_cast<int>(state));
+	// 	if (state == PeerConnection::GatheringState::Complete) {
+	// 		if (auto pc = wpc.lock()) {
+	// 			auto description = pc->localDescription();
+	// 			json message = {
+	// 				{"ClientId", id},
+	// 				{"Type", description->typeString()},
+	// 				{"Sdp", string(description.value())}
+	// 			};
+			
+	// 			APP_DBG("[BEFORE] Sent SDP to WebSocket: %s\n", message.dump().c_str());
+
+	// 			// Gathering complete, send answer
+	// 			if (auto ws = wws.lock()) {
+	// 				APP_DBG("WebSocket is alive, preparing to send message for client ID: %s\n", id.c_str());
+	// 				ws->send(message.dump());
+	// 				// Print out the message that has been sent
+	// 				APP_DBG("Sent SDP to WebSocket: %s\n", message.dump().c_str());
+	// 			}
+	// 			else
+	// 				APP_DBG("ERRRRRRRRRRRRRRRRRRRRRRRRRRRO");
+	// 		}
+	// 	}
+	// });
+	pc->onGatheringStateChange([wpc = make_weak_ptr(pc), id, wws](PeerConnection::GatheringState state) {
+	APP_DBG("Gathering State: %d\n", static_cast<int>(state));
+	try {
 		if (state == PeerConnection::GatheringState::Complete) {
-			if (auto pc = wpc.lock()) {
-				auto description = pc->localDescription();
-				json message	 = {
-					{"Data",	 {{"Type", description->typeString()}, {"Sdp", string(description.value())}, {"ClientId", id}}},
-					{"Result", {{"Ret", MTCE_MQTT_RESPONE_SUCCESS}, {"Message", "Success"}}								   }
-				};
-				// task_post_dynamic_msg(GW_TASK_HELLO_ID, GW_CLOUD_SIGNALING_MQTT_RES, (uint8_t *)message.dump().data(), message.dump().length() + 1);
+		APP_DBG("Gathering complete, about to lock weak_ptr\n");
+		if (auto pc = wpc.lock()) {
+			APP_DBG("Locked weak_ptr, getting local description\n");
+			auto description = pc->localDescription();
+			if (description) {
+			json message = {
+				{"ClientId", id},
+				{"Type", description->typeString()},
+				{"Sdp", string(description.value())}
+			};
+			
+			APP_DBG("[BEFORE] Sent SDP to WebSocket: %s\n", message.dump().c_str());
+			if (auto ws = wws.lock()) {
+				APP_DBG("WebSocket is alive, sending message\n");
+				ws->send(message.dump());
+				APP_DBG("Sent SDP to WebSocket: %s\n", message.dump().c_str());
+			} else {
+				APP_DBG("WebSocket weak_ptr expired\n");
 			}
+			} else {
+			APP_DBG("Failed to get local description\n");
+			}
+		} else {
+			APP_DBG("PeerConnection weak_ptr expired\n");
 		}
+		}
+	} catch (const std::exception& e) {
+		APP_DBG("Exception in onGatheringStateChange: %s\n", e.what());
+	}
 	});
+
 
 	pc->onLocalCandidate([id, wpc = make_weak_ptr(pc)](const Candidate &candidate) {
 		APP_DBG("Entered onLocalCandidate callback for client: %s.\n", id.c_str());
@@ -393,6 +449,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, const st
 			{"SdpMid", candidate.mid()},
 			{"ClientId", id}
 		};
+		std::cout << message.dump(4) << std::endl;
 
 		std::string message_str = message.dump();
 		APP_DBG("JSON message constructed for client: %s, message: %s\n", id.c_str(), message_str.c_str());
