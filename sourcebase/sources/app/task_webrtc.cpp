@@ -59,27 +59,17 @@ using json = nlohmann::json;
 
 q_msg_t gw_task_webrtc_mailbox;
 std::shared_ptr<PeerConnection> pc = nullptr;  // AK_MSG_NULL has been did with #define AK_MSG_NULL ((ak_msg_t *)0)
-// #ifdef TEST_USE_WEB_SOCKET
+std::shared_ptr<WebSocket> globalWebSocket;
+shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr<WebSocket> wws, const string& id);
 
 static int8_t loadWsocketSignalingServerConfigFile(string &wsUrl);
-// #endif
-std::shared_ptr<WebSocket> globalWebSocket;
-
 static Configuration rtcConfig;
 static int8_t loadIceServersConfigFile(Configuration &rtcConfig);
-// void handleWebSocketMessage(const std::string& message);
 void handleWebSocketMessage(const std::string& message, std::shared_ptr<WebSocket> ws);
-// shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, string id);
-// void handleClientRequest(const std::string& clientId);
 void handleClientRequest(const std::string& clientId, std::shared_ptr<WebSocket> ws);
-void onPeerConnectionStateChange(const string& clientId, PeerConnection::State state);
-void onDataChannelOpen(const string& clientId);
-void onDataChannelMessage(const string& clientId, const binary& data);
-void onDataChannelStringMessage(const string& clientId, const string& message);
-void sendLocalDescription(const Description &description);
-void sendIceCandidate(const Candidate &candidate);
+void handleAnswer(const std::string& id, const json& message);
 
-shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr<WebSocket> wws, const string& id);
+std::unordered_map<std::string, std::shared_ptr<PeerConnection>> peerConnections;
 
 
 
@@ -271,11 +261,11 @@ int8_t loadWsocketSignalingServerConfigFile(string &wsUrl) {
     
     return ret;
 }
-
+// /
 // "Exchange of Offer and Answer"
 void handleWebSocketMessage(const std::string& message, std::shared_ptr<WebSocket> ws) {
-    APP_DBG("[WebSocket Message Received]: %s\n", message.c_str());
 
+    APP_DBG("[WebSocket Message Received]: %s\n", message.c_str());
     if (ws && ws->isOpen()) {
         // It is safe to use 'ws' here
     } else {
@@ -304,18 +294,32 @@ void handleWebSocketMessage(const std::string& message, std::shared_ptr<WebSocke
                     APP_DBG("Error: ClientId not found in request message\n");
                 }
             } else if (type == "candidate") {
-                string sdp = messageJson["candidate"]["sdp"].get<string>();
-                string mid = messageJson["candidate"]["mid"].get<string>();
+				APP_DBG("[Type: candidate]\n");
+                string sdp = messageJson["sdp"].get<string>();
+                string mid = messageJson["mid"].get<string>();
                 APP_DBG("Adding ICE Candidate: sdp=%s, mid=%s\n", sdp.c_str(), mid.c_str());
                 
-                pc->addRemoteCandidate(Candidate(sdp, mid));
-            } else if (type == "answer") {
-                string sdp = messageJson["answer"]["sdp"].get<string>();
-                APP_DBG("Setting Remote Description with SDP: %s\n", sdp.c_str());
-                
-                pc->setRemoteDescription(Description(sdp, "answer"));
-            }
-            // Other message types can be handled here
+                // pc->addRemoteCandidate(Candidate(sdp, mid));
+            } 
+			else if (type == "answer") {
+				auto clientIdIt = messageJson.find("ClientId");
+				if (clientIdIt != messageJson.end()) {
+					string clientId = clientIdIt->get<string>();
+					APP_DBG("Received answer for client ID: %s\n", clientId.c_str());
+					
+					auto pcIter = peerConnections.find(clientId);
+					if (pcIter != peerConnections.end()) {
+						auto& pc = pcIter->second;
+						if (pc->localDescription() && pc->localDescription()->type() == Description::Type::Offer) {
+							handleAnswer(clientId, messageJson);
+						} else {
+							APP_DBG("Received answer in an unexpected state.\n");
+						}
+					} else {
+						APP_DBG("No PeerConnection found for client ID: %s\n", clientId.c_str());
+					}
+				}
+			}
         } else {
             APP_DBG("Error: Message type not specified\n");
         }
@@ -337,7 +341,8 @@ void handleClientRequest(const std::string& clientId, std::shared_ptr<WebSocket>
 		// auto ws = make_shared<WebSocket>(); // This should be managed globally or outside this function
         // weak_ptr<WebSocket> wws = ws; // Convert shared_ptr to weak_ptr
         // // Create a new peer connection for the client
-        std::shared_ptr<Client> newClient = createPeerConnection(rtcConfig, make_weak_ptr(ws), clientId);
+        std::shared_ptr<Client> newClient = createPeerConnection(rtcConfig, make_weak_ptr(ws), clientId); //each id each peer following
+		peerConnections[clientId] = newClient->peerConnection;
         lockMutexListClients();
         clients.emplace(clientId, newClient);
         // printAllClients();
@@ -350,6 +355,52 @@ void handleClientRequest(const std::string& clientId, std::shared_ptr<WebSocket>
         APP_DBG("Reached max client limit. Cannot handle new request for client: %s\n", clientId.c_str());
     }
 }
+
+void handleAnswer(const std::string& id, const json& message) {
+    auto pcIter = peerConnections.find(id);
+    if (pcIter == peerConnections.end()) {
+        APP_DBG("No PeerConnection found for client ID: %s\n", id.c_str());
+        return;
+    }
+	std::shared_ptr<PeerConnection>& pc = pcIter->second;
+    if (!pc) {
+        APP_DBG("PeerConnection pointer is null, cannot handle answer for client ID: %s\n", id.c_str());
+        // Depending on your application logic, you may want to reconnect, throw an exception, or handle this error appropriately.
+        return;
+    }
+
+    APP_DBG("Received answer for client ID: %s\n", id.c_str());
+    auto sdp = message["Sdp"].get<string>();
+    auto desRev = Description(sdp, "answer");
+
+    if (pc->remoteDescription().has_value()) {
+        // Existing remote description, check ICE credentials
+        if (desRev.iceUfrag().has_value() && desRev.icePwd().has_value() &&
+            desRev.iceUfrag().value() == pc->remoteDescription().value().iceUfrag().value() &&
+            desRev.icePwd().value() == pc->remoteDescription().value().icePwd().value()) {
+
+            // Add remote candidates if any
+            auto remoteCandidates = desRev.extractCandidates();
+            for (const auto& candidate : remoteCandidates) {
+                APP_DBG("Adding ICE Candidate: %s\n", candidate.candidate().c_str());
+                pc->addRemoteCandidate(candidate);
+            }
+        } else {
+            APP_DBG("ICE credentials mismatch for client ID: %s\n", id.c_str());
+            // Handle error, possibly throw an exception
+        }
+    } else {
+        APP_DBG("Setting new remote description for client ID: %s\n", id.c_str());
+        try {
+            pc->setRemoteDescription(desRev);
+            APP_DBG("New session description set for client ID: %s\n", id.c_str());
+        } catch (const exception& e) {
+            APP_DBG("Error setting remote description for client ID: %s: %s\n", id.c_str(), e.what());
+            // Handle error, possibly throw an exception
+        }
+    }
+}
+
 
 shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr<WebSocket> wws, const string& id) {
 	if (wws.expired()) {
