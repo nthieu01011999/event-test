@@ -29,7 +29,7 @@
 #include "app_data.h"
 #include "app_config.h"
 #include "app_dbg.h"
-// #include "datachannel_hdl.h"
+#include "datachannel_hdl.h"
 
 #include "task_list.h"
 
@@ -170,19 +170,19 @@ void *gw_task_webrtc_entry(void *) {
 
 		case GW_WEBRTC_ON_MESSAGE_CONTROL_DATACHANNEL_REQ: {
 			APP_DBG_SIG("GW_WEBRTC_ON_MESSAGE_CONTROL_DATACHANNEL_REQ\n");
-			// try {
-			// 	json message = json::parse(string((char *)msg->header->payload, msg->header->len));
-			// 	string id	 = message["ClientId"].get<string>();
-			// 	string data	 = message["Data"].get<string>();
-			// 	string resp	 = "";
-			// 	APP_DBG("client id: %s, msg: %s\n", id.c_str(), data.c_str());
-			// 	onDataChannelHdl(id, data, resp);
-			// 	sendMsgControlDataChannel(id, resp);
-			// }
-			// catch (const exception &error) {
-			// 	APP_DBG("%s\n", error.what());
-			// }
-			// APP_DBG("end datachannel handle\n");
+			try {
+				json message = json::parse(string((char *)msg->header->payload, msg->header->len));
+				string id	 = message["ClientId"].get<string>();
+				string data	 = message["Data"].get<string>();
+				string resp	 = "";
+				APP_DBG("client id: %s, msg: %s\n", id.c_str(), data.c_str());
+				onDataChannelHdl(id, data, resp);
+				sendMsgControlDataChannel(id, resp);
+			}
+			catch (const exception &error) {
+				APP_DBG("%s\n", error.what());
+			}
+			APP_DBG("end datachannel handle\n");
 		} break;
 			
 		default:
@@ -306,7 +306,6 @@ void handleWebSocketMessage(const std::string& message, std::shared_ptr<WebSocke
 				if (clientIdIt != messageJson.end()) {
 					string clientId = clientIdIt->get<string>();
 					APP_DBG("Received answer for client ID: %s\n", clientId.c_str());
-					
 					auto pcIter = peerConnections.find(clientId);
 					if (pcIter != peerConnections.end()) {
 						auto& pc = pcIter->second;
@@ -368,8 +367,6 @@ void handleAnswer(const std::string& id, const json& message) {
         // Depending on your application logic, you may want to reconnect, throw an exception, or handle this error appropriately.
         return;
     }
-
-    APP_DBG("Received answer for client ID: %s\n", id.c_str());
     auto sdp = message["Sdp"].get<string>();
     auto desRev = Description(sdp, "answer");
 
@@ -508,11 +505,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 			APP_DBG("Exception caught while posting ICE candidate message for client: %s: %s\n", id.c_str(), e.what());
 		}
 	});
-
-
-
-
-
+	
 // #if BUILD_ARM_VVTK
 // 	client->video = addVideo(pc, 102, 1, "VideoStream", "Stream", [id, wc = make_weak_ptr(client)]() {	  // TODO add peer sergment fault
 // 		if (auto c = wc.lock()) {

@@ -26,3 +26,26 @@ void unlockMutexListClients() {
 std::string mtce_getSerialInfo() {
 	return std::string(mtce_deviceInfo.serial, strlen(mtce_deviceInfo.serial));
 }
+
+void sendMsgControlDataChannel(const string &id, const string &msg) {
+	if (msg.empty())
+		return;
+
+	lockMutexListClients();
+	if (auto jt = clients.find(id); jt != clients.end()) {
+		auto dc = jt->second->dataChannel.value();
+		APP_PRINT("Send message to %s\n", id.c_str());
+		try {
+			if (dc->isOpen()) {
+				dc->send(msg);
+			}
+		}
+		catch (const exception &error) {
+			APP_DBG("%s\n", error.what());
+		}
+	}
+	else {
+		APP_PRINT("%s not found\n", id.c_str());
+	}
+	unlockMutexListClients();
+}

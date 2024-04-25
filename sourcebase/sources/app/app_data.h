@@ -33,7 +33,7 @@ typedef struct {
 
 extern void lockMutexListClients();
 extern void unlockMutexListClients();
-
+extern void sendMsgControlDataChannel(const string &id, const string &msg);
 extern std::string mtce_getSerialInfo();
 
 #ifdef __cplusplus
