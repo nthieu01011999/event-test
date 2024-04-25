@@ -505,7 +505,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 			APP_DBG("Exception caught while posting ICE candidate message for client: %s: %s\n", id.c_str(), e.what());
 		}
 	});
-	
+
 // #if BUILD_ARM_VVTK
 // 	client->video = addVideo(pc, 102, 1, "VideoStream", "Stream", [id, wc = make_weak_ptr(client)]() {	  // TODO add peer sergment fault
 // 		if (auto c = wc.lock()) {
@@ -527,7 +527,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 
 	auto dc = pc->createDataChannel("control");
 	dc->onOpen([id, wcl = make_weak_ptr(client)]() {
-		APP_DBG("[createDataChannel] open channel labe");
+		APP_DBG("[createDataChannel] open channel label");
 		if (auto cl = wcl.lock()) {
 			auto dc = cl->dataChannel.value();
 			APP_DBG("open channel label: %s success\n", dc->label().c_str());
