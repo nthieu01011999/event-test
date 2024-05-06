@@ -506,7 +506,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 		}
 	});
 
-// #if BUILD_ARM_VVTK
+
 // 	client->video = addVideo(pc, 102, 1, "VideoStream", "Stream", [id, wc = make_weak_ptr(client)]() {	  // TODO add peer sergment fault
 // 		if (auto c = wc.lock()) {
 // 			addToStream(c, true);
@@ -523,7 +523,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 // 			APP_DBG("Audio from %s opened\n", id.c_str());
 // 		},
 // 		id);
-// #endif
+
 
 	auto dc = pc->createDataChannel("control");
 	dc->onOpen([id, wcl = make_weak_ptr(client)]() {
