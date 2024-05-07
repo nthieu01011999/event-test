@@ -85,7 +85,7 @@ int streamHdl(json &content, bool &respFlag) {
 
 	APP_DBG("HELLO WORLKD\n");
 // 	(void)(respFlag);
-// 	int rc = APP_CONFIG_SUCCESS;
+	int rc = APP_CONFIG_SUCCESS;
 // 	APP_DBG("streamHdl() -> %s\n", content.dump(4).c_str());
 // #if (CHECK_TIME_EXE == 1)
 // 	std::cout << "[EXEC-TIME] streamHdl\n";
@@ -157,5 +157,5 @@ int streamHdl(json &content, bool &respFlag) {
 // 	std::cout << "[EXEC-TIME] streamHdl exe time: " << duration.count() << " milliseconds\n";
 // #endif
 
-// 	return rc;
+	return rc;
 }

@@ -531,7 +531,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 		if (auto cl = wcl.lock()) {
 			auto dc = cl->dataChannel.value();
 			APP_DBG("open channel label: %s success\n", dc->label().c_str());
-			dc->send("Hello from " + mtce_getSerialInfo());
+			// dc->send("Hello from " + mtce_getSerialInfo());
 			APP_DBG("remove timeout connect\n");
 			cl->removeTimeoutConnect();
 			cl->mIsSignalingOk = true;
