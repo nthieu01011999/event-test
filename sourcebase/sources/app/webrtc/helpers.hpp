@@ -16,7 +16,8 @@
 
 #include "app_dbg.h"
 #include "rtc/rtc.hpp"
-// #include "stream.hpp"
+#include "stream.hpp"
+#include "streamsource.hpp"
 
 using namespace std;
 
@@ -86,9 +87,9 @@ public:
 
 	/* Media Stream Methods (Live & PLayBack) */
 	// void setMediaStreamOptions(eOptions opt);
-	// eOptions getMediaStreamOptions();
+	eOptions getMediaStreamOptions();
 	// void setLiveResolution(LiveStream::eResolution res);
-	// LiveStream::eResolution getLiveResolution();
+	LiveStream::eResolution getLiveResolution();
 	// void assignRecord(std::string pathToRecords, std::string dateTime, std::string desc);
 	// void setPbControl(PlayBack::ePbControl pbc, uint32_t *argv);
 	// PlayBack::ePbStatus getPbStatus();
@@ -139,7 +140,7 @@ private:
 	uint32_t mCursorFile;
 
 	eOptions mOptions						= eOptions::Idle;
-	// LiveStream::eResolution mLiveResolution = LiveStream::eResolution::HD720p;
+	LiveStream::eResolution mLiveResolution = LiveStream::eResolution::HD720p;
 	// PlayBack::ePbStatus mPbStatus			= PlayBack::ePbStatus::Stopped;
 	// SDSource mVideoPbAttributes;
 	// SDSource mAudioPbAttributes;

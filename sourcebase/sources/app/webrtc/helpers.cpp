@@ -164,13 +164,13 @@ void Client::setTimerConnectId(size_t newTimerConnectId) {
 // 	pthread_mutex_unlock(&mPOSIXMutex);
 // }
 
-// Client::eOptions Client::getMediaStreamOptions() {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	auto ret = mOptions;
-// 	pthread_mutex_unlock(&mPOSIXMutex);
+Client::eOptions Client::getMediaStreamOptions() {
+	pthread_mutex_lock(&mPOSIXMutex);
+	auto ret = mOptions;
+	pthread_mutex_unlock(&mPOSIXMutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
 // void Client::setLiveResolution(LiveStream::eResolution res) {
 // 	pthread_mutex_lock(&mPOSIXMutex);
@@ -178,13 +178,13 @@ void Client::setTimerConnectId(size_t newTimerConnectId) {
 // 	pthread_mutex_unlock(&mPOSIXMutex);
 // }
 
-// LiveStream::eResolution Client::getLiveResolution() {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	auto ret = mLiveResolution;
-// 	pthread_mutex_unlock(&mPOSIXMutex);
+LiveStream::eResolution Client::getLiveResolution() {
+	pthread_mutex_lock(&mPOSIXMutex);
+	auto ret = mLiveResolution;
+	pthread_mutex_unlock(&mPOSIXMutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
 // void Client::assignRecord(std::string pathToRecords, std::string dateTime, std::string desc) {
 // 	pthread_mutex_lock(&mPOSIXMutex);

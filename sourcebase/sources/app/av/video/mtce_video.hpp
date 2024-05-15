@@ -9,6 +9,9 @@
 #include "app_dbg.h"
 #include "app_config.h"
 #include "parser_json.h"
+#include "task_list.h"
+#include "stream.hpp"
+#include "h26xsource.hpp"
 
 #define MTCE_MAIN_STREAM	0
 #define MTCE_SUB_STREAM		1
@@ -32,7 +35,7 @@ public:
 	std::atomic<bool> videoForceStopStream;
 
 private:
-    // std::optional<std::shared_ptr<VideoCtrl>> mVideoChn[MTCE_MAX_STREAM_NUM];
+    std::optional<std::shared_ptr<VideoCtrl>> mVideoChn[MTCE_MAX_STREAM_NUM];
     std::atomic<bool> mInitialized;
 };
  

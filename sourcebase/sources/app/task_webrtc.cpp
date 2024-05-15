@@ -527,7 +527,7 @@ shared_ptr<Client> createPeerConnection(const Configuration &rtcConfig, weak_ptr
 
 	auto dc = pc->createDataChannel("control");
 	dc->onOpen([id, wcl = make_weak_ptr(client)]() {
-		APP_DBG("[createDataChannel] open channel label");
+		APP_DBG("[createDataChannel] open channel label\n");
 		if (auto cl = wcl.lock()) {
 			auto dc = cl->dataChannel.value();
 			APP_DBG("open channel label: %s success\n", dc->label().c_str());
