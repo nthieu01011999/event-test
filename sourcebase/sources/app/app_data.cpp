@@ -30,7 +30,7 @@ std::string mtce_getSerialInfo() {
 void sendMsgControlDataChannel(const string &id, const string &msg) {
 	if (msg.empty())
 		return;
-
+	
 	lockMutexListClients();
 	if (auto jt = clients.find(id); jt != clients.end()) {
 		auto dc = jt->second->dataChannel.value();

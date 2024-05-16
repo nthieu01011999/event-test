@@ -130,46 +130,46 @@ extern "C" VVTK_RET_CALLBACK onStartSubChannel(const vvtk_video_frame_t *videoFr
 }
 
 void VideoCtrl::captureFrame(int channel, uint8_t *bytes, uint32_t nbBytes) {
-//     if (videoCtrl.videoForceStopStream) {
-//         return;
-//     }
+    if (videoCtrl.videoForceStopStream) {
+        return;
+    }
 
-//     bool isFullHD = (channel == MTCE_MAIN_STREAM);
+    bool isFullHD = (channel == MTCE_MAIN_STREAM);
 
-//     Stream::pubLicStreamPOSIXMutexLOCK();
+    Stream::pubLicStreamPOSIXMutexLOCK();
     
-//     auto nalUnits = H26XSource::ExtractSeqNALUS(bytes, nbBytes);
-//     if (!nalUnits.empty()) {
-//         auto &refNalUnits = Stream::nalUnitsMain; // Default to main channel
+    auto nalUnits = H26XSource::ExtractSeqNALUS(bytes, nbBytes);
+    if (!nalUnits.empty()) {
+        auto &refNalUnits = Stream::nalUnitsMain; // Default to main channel
         
-//         switch (channel) {
-//             case MTCE_MAIN_STREAM:
-//                 refNalUnits = Stream::nalUnitsMain;
-//                 break;
-//             case MTCE_SUB_STREAM:
-//                 refNalUnits = Stream::nalUnitsSub;
-//                 break;
-//             default:
-//                 break;
-//         }
+        switch (channel) {
+            case MTCE_MAIN_STREAM:
+                refNalUnits = Stream::nalUnitsMain;
+                break;
+            case MTCE_SUB_STREAM:
+                refNalUnits = Stream::nalUnitsSub;
+                break;
+            default:
+                break;
+        }
         
-//         refNalUnits.clear();
-//         refNalUnits.shrink_to_fit();
-//         refNalUnits.assign(nalUnits.begin(), nalUnits.end());
-//     }
+        refNalUnits.clear();
+        refNalUnits.shrink_to_fit();
+        refNalUnits.assign(nalUnits.begin(), nalUnits.end());
+    }
 
-//     Stream::pubLicStreamPOSIXMutexUNLOCK();
+    Stream::pubLicStreamPOSIXMutexUNLOCK();
 
-//     pthread_mutex_lock(&mtxStreamVideo);
-//     Stream::MediaLiveVideo(isFullHD, bytes, nbBytes);
-//     pthread_mutex_unlock(&mtxStreamVideo);
+    pthread_mutex_lock(&mtxStreamVideo);
+    Stream::MediaLiveVideo(isFullHD, bytes, nbBytes);
+    pthread_mutex_unlock(&mtxStreamVideo);
 }
 
 bool VideoCtrl::getStreamIsRunningChannel(int channel) {
     if (channel < MTCE_MAX_STREAM_NUM && channel >= 0) {
-        // if (mVideoChn[channel]) {
-        //     return mVideoChn[channel].value()->streamIsRunning;
-        // }
+        if (mVideoChn[channel]) {
+            return mVideoChn[channel].value()->streamIsRunning;
+        }
     }
     return false;
 }

@@ -10,8 +10,8 @@
 #include "app_config.h"
 #include "parser_json.h"
 #include "task_list.h"
-#include "stream.hpp"
-#include "h26xsource.hpp"
+// #include "stream.hpp"
+// #include "h26xsource.hpp"
 
 #define MTCE_MAIN_STREAM	0
 #define MTCE_SUB_STREAM		1

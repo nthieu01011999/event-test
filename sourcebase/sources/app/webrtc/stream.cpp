@@ -180,12 +180,9 @@ void Stream::onPbSampleHdl(std::function<void(StreamSourceType, uint64_t)> handl
 pthread_mutex_t Stream::pubLicStreamPOSIXMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void Stream::pubLicStreamPOSIXMutexLOCK() {
-#if 0
-	while (pthread_mutex_trylock(&pubLicStreamPOSIXMutex) != 0);
-#else
-	pthread_mutex_lock(&pubLicStreamPOSIXMutex);
-#endif
+    pthread_mutex_lock(&pubLicStreamPOSIXMutex);
 }
+
 
 void Stream::pubLicStreamPOSIXMutexUNLOCK() {
 	pthread_mutex_unlock(&pubLicStreamPOSIXMutex);
