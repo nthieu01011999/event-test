@@ -34,13 +34,13 @@ q_msg_t gw_task_av_mailbox;
 static pthread_mutex_t mtxStreamVideo = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mtxListClients = PTHREAD_MUTEX_INITIALIZER;
 
-VideoCtrl videoCtrl;
+// VideoCtrl videoCtrl;
 static int8_t captureRetryCounter = 0;
 static int8_t streamRetryCounter  = 0;
 
 void *gw_task_av_entry(void *) {
     wait_all_tasks_started();
-    APP_PRINT("[STARTED] Task AV\n");
+    APP_DBG("[STARTED] Task AV\n");
     ak_msg_t *msg = AK_MSG_NULL;
 
     // task_post_pure_msg(GW_TASK_AV_ID, GW_AV_INIT_REQ);

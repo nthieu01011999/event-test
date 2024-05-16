@@ -5,171 +5,135 @@
 #include <time.h>
 #include <sys/time.h>
 #include <iostream>
+
+#include "app_data.h"
+#include "app_config.h"
 #include "mtce_video.hpp"
-#include "stream.hpp"
-#include "h26xsource.hpp"
+#include "parser_json.h"
+#include "task_list.h"
 
-
-
-#define VIDEO_DEBUG 1
-
-extern VideoCtrl videoCtrl;
-static pthread_mutex_t mtxStreamVideo = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t mtxListClients = PTHREAD_MUTEX_INITIALIZER;
-
-VideoCtrl::VideoCtrl() {
-	APP_DBG("[video] Init class VideoCtrl\n");
-	videoForceStopStream = false;
+ 
+// VideoChannel Class Definitions
+static mtce_sizePicture_t size_of_picture[] = {
+	[MTCE_CAPTURE_SIZE_VGA]	  = {640,  360 },
+	[MTCE_CAPTURE_SIZE_720P]  = {1280, 720 },
+	[MTCE_CAPTURE_SIZE_1080P] = {1920, 1080},
+	[MTCE_CAPTURE_SIZE_2K]	  = {2304, 1296},
+	[MTCE_CAPTURE_SIZE_NONE]  = {0,	0	 }
+};
+// Constructor
+VideoChannel::VideoChannel() : mWidth(0), mHeight(0), streamIsRunning(false) {
+    std::cout << "Initializing VideoChannel with default settings." << std::endl;
 }
 
+// Destructor
+VideoChannel::~VideoChannel() {
+    std::cout << "Destroying VideoChannel instance." << std::endl;
+}
+
+int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) {
+    int err;
+    vvtk_video_config_t videoConf;
+
+    // Simplified assumption: Only handling H264 and H265 for testing
+    videoConf.codec = (mediaFormat->format.compression == MTCE_CAPTURE_COMP_H264) ? VVTK_VIDEO_CODEC_H264 : VVTK_VIDEO_CODEC_H265;
+
+    // Set resolution directly from a predefined array based on input format
+    mtce_sizePicture_t size_pic = size_of_picture[mediaFormat->format.resolution];
+    videoConf.width = size_pic.width;
+    videoConf.height = size_pic.height;
+
+    // Set a default frame rate for testing
+    videoConf.frame_rate = 30; // Default to 30 FPS for basic testing
+
+    // Set the video configuration
+    err = vvtk_set_video_config(channel, &videoConf);
+    if (err != 0) {
+        APP_DBG("[video] encode set config channel %d error: %d\n", channel, err);
+        return -1;
+    }
+
+    APP_DBG("[video] config encode channel %d success\n", channel);
+    APP_DBG("[video] set resolution [%dx%d]\n", videoConf.width, videoConf.height);
+
+    return 0;
+}
+
+// Set configuration for the video channel based on resolution
+void VideoChannel::setConfChannel(const mtce_sizePicture_t &size) {
+    mWidth = size.width;
+    mHeight = size.height;
+    std::cout << "Configuration set: Width = " << mWidth << ", Height = " << mHeight << std::endl;
+}
+
+// Start video streaming on a specific channel
+int VideoChannel::startStream(int channel) {
+    if (!streamIsRunning) {
+        streamIsRunning = true;
+        std::cout << "Starting video stream on channel " << channel << " at resolution " << mWidth << "x" << mHeight << "." << std::endl;
+        // Here you would typically invoke lower-level API calls to start the hardware or software stream
+        // For example:
+        // hardwareAPI.startCamera(mWidth, mHeight);
+    } else {
+        std::cout << "Stream already running on channel " << channel << "." << std::endl;
+        return -1; // Stream already running
+    }
+    return 0; // Success
+}
+
+// Stop video streaming on a specific channel
+void VideoChannel::stopStream(int channel) {
+    if (streamIsRunning) {
+        streamIsRunning = false;
+        std::cout << "Stopping video stream on channel " << channel << "." << std::endl;
+        // Similar to startStream, you would have a hardware or software call to stop the stream
+        // hardwareAPI.stopCamera();
+    } else {
+        std::cout << "Stream not running on channel " << channel << ", nothing to stop." << std::endl;
+    }
+}
+
+// VideoCtrl Class Definitions
+
+// Constructor
+VideoCtrl::VideoCtrl() : mInitialized(false) {
+    std::cout << "VideoCtrl initialized. Ready to configure channels." << std::endl;
+}
+
+// Destructor
 VideoCtrl::~VideoCtrl() {
-	APP_DBG("[video] Release class VideoCtrl\n");
-	stopStreamAllChannels();
+    std::cout << "Cleaning up VideoCtrl resources." << std::endl;
 }
 
+// Start streams on all configured channels
+void VideoCtrl::startStreamAllChannels() {
+    std::cout << "Attempting to start all video streams." << std::endl;
+    for (int i = 0; i < 4; ++i) { // Assuming 4 channels for simplicity
+        if (!mVideoChn[i].streamIsRunning) {
+            mVideoChn[i].startStream(i);
+        }
+    }
+    setInitialized(true);
+}
+
+// Stop streams on all channels
 void VideoCtrl::stopStreamAllChannels() {
-	int i;
-	for (i = 0; i < MTCE_MAX_STREAM_NUM; i++) {
-		// mVideoChn[i].value()->stopCapture(i);
-	}
-}
-
-bool VideoCtrl::initializeCamera(int channel) {
-	vvtk_video_config_t config;
-	config.codec = VVTK_VIDEO_CODEC_H264;
-	config.width = 1920;
-	config.height = 1080;
-	config.frame_rate = 30;
-	config.bitrate_max = 5000;
-	config.encoding_mode = VVTK_VIDEO_ENCODING_MODE_CBR;
-
-	VVTK_RET result = vvtk_set_video_config(channel, &config);
-	if(result == VVTK_RET_SUCCESS) {
-		APP_DBG("Camera initialized successfully on channel %d\n", channel);
-	}
-	else {
-		APP_DBG("Failed to initialize camera on channel %d\n", channel);
-	}
-}
-
-void VideoCtrl::startCapture(int channel) {
-	if(!initializeCamera(channel)) {
-		APP_DBG("Camera on channel %d is not initialized.\n", channel);
-		return;
-	}
-
-	VVTK_VIDEO_CALLBACK cb;
-	switch (channel)
-	{
-	case MTCE_MAIN_STREAM:
-		cb = onStartMainChannel;
-		break;
-	case MTCE_SUB_STREAM:
-		cb = onStartSubChannel;
-		break;
-	default:
-		APP_DBG("Invalid channel %d\n", channel);
-		return;
-		break;
-	}
-	
-	if (vvtk_set_video_callback(channel, cb, nullptr) == VVTK_RET_SUCCESS) {
-		APP_DBG("Capture started on channel %d\n", channel);
-		streamIsRunning = true;
-	} else {
-		throw std::runtime_error("[VIDEO] Failed to register video callback.\n");
-	}
-
-}
-
-void VideoCtrl::stopCapture(int channel) {
-
-
-	VVTK_VIDEO_CALLBACK cb;
-	switch (channel)
-	{
-	case MTCE_MAIN_STREAM:
-		cb = onStartMainChannel;
-		break;
-	case MTCE_SUB_STREAM:
-		cb = onStartSubChannel;
-		break;
-	default:
-		APP_DBG("Invalid channel %d\n", channel);
-		return;
-		break;
-	}
-	
-	if (vvtk_set_video_callback(channel, cb, nullptr) == VVTK_RET_SUCCESS) {
-		APP_DBG("Capture started on channel %d\n", channel);
-		streamIsRunning = false;
-	} else {
-		APP_DBG("[VIDEO] stop stream on channel %d error\n", channel);
-	}
-
-}
-
-extern "C" VVTK_RET_CALLBACK onStartMainChannel(const vvtk_video_frame_t *videoFrame, const void *arg) {
-	(void)videoFrame;
-	(void)arg;
-	if (videoFrame->size > (int)sizeof(rtc::NalUnitHeader)) {
-		videoCtrl.captureFrame(MTCE_MAIN_STREAM, videoFrame->data, videoFrame->size);
-	}
-
-	return VVTK_RET_CALLBACK_CONTINUE;
-}
-
-extern "C" VVTK_RET_CALLBACK onStartSubChannel(const vvtk_video_frame_t *videoFrame, const void *arg) {
-	(void)videoFrame;
-	(void)arg;
-	if (videoFrame->size > (int)sizeof(rtc::NalUnitHeader)) {
-		videoCtrl.captureFrame(MTCE_SUB_STREAM, videoFrame->data, videoFrame->size);
-	}
-
-	return VVTK_RET_CALLBACK_CONTINUE;
-}
-
-void VideoCtrl::captureFrame(int channel, uint8_t *bytes, uint32_t nbBytes) {
-    if (videoCtrl.videoForceStopStream) {
-        return;
-    }
-
-    bool isFullHD = (channel == MTCE_MAIN_STREAM);
-
-    Stream::pubLicStreamPOSIXMutexLOCK();
-    
-    auto nalUnits = H26XSource::ExtractSeqNALUS(bytes, nbBytes);
-    if (!nalUnits.empty()) {
-        auto &refNalUnits = Stream::nalUnitsMain; // Default to main channel
-        
-        switch (channel) {
-            case MTCE_MAIN_STREAM:
-                refNalUnits = Stream::nalUnitsMain;
-                break;
-            case MTCE_SUB_STREAM:
-                refNalUnits = Stream::nalUnitsSub;
-                break;
-            default:
-                break;
-        }
-        
-        refNalUnits.clear();
-        refNalUnits.shrink_to_fit();
-        refNalUnits.assign(nalUnits.begin(), nalUnits.end());
-    }
-
-    Stream::pubLicStreamPOSIXMutexUNLOCK();
-
-    pthread_mutex_lock(&mtxStreamVideo);
-    Stream::MediaLiveVideo(isFullHD, bytes, nbBytes);
-    pthread_mutex_unlock(&mtxStreamVideo);
-}
-
-bool VideoCtrl::getStreamIsRunningChannel(int channel) {
-    if (channel < MTCE_MAX_STREAM_NUM && channel >= 0) {
-        if (mVideoChn[channel]) {
-            return mVideoChn[channel].value()->streamIsRunning;
+    std::cout << "Attempting to stop all video streams." << std::endl;
+    for (int i = 0; i < 4; ++i) {
+        if (mVideoChn[i].streamIsRunning) {
+            mVideoChn[i].stopStream(i);
         }
     }
-    return false;
+    setInitialized(false);
+}
+
+// Return the initialization status
+bool VideoCtrl::initialized() const {
+    return mInitialized.load();
+}
+
+// Set the initialization status
+void VideoCtrl::setInitialized(bool newInitialized) {
+    mInitialized = newInitialized;
+    std::cout << "Initialization status set to " << (newInitialized ? "true" : "false") << std::endl;
 }

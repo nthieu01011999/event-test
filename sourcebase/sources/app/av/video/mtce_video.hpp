@@ -1,58 +1,45 @@
 #ifndef __VIDEO_HPP__
 #define __VIDEO_HPP__
 
-#include <pthread.h>
-#include <vvtk_video.h>
-#include <vvtk_def.h>
+#include <atomic>
 
-#include "app_data.h"
-#include "app_dbg.h"
-#include "app_config.h"
-#include "parser_json.h"
-#include "task_list.h"
-// #include "stream.hpp"
-// #include "h26xsource.hpp"
+// Basic structure for video resolution
+typedef struct {
+    int width;
+    int height;
+} mtce_sizePicture_t;
 
-#define MTCE_MAIN_STREAM	0
-#define MTCE_SUB_STREAM		1
-#define MTCE_MAX_STREAM_NUM 2
+// Basic video channel class for handling video streams
+class VideoChannel {
+public:
+    VideoChannel();
+    ~VideoChannel();
 
-extern "C" VVTK_RET_CALLBACK onStartMainChannel(const vvtk_video_frame_t *videoFrame, const void *arg);
-extern "C" VVTK_RET_CALLBACK onStartSubChannel(const vvtk_video_frame_t *videoFrame, const void *arg);
+    void setConfChannel(const mtce_sizePicture_t &size);
+    int startStream(int channel);
+    void stopStream(int channel);
+    bool streamIsRunning;
+    int applyConf(int channel, const mtce_mediaFormat_t *mediaFormat);
+private:
+    int mWidth;
+    int mHeight;
+};
 
+// Controller class for managing video channels
 class VideoCtrl {
 public:
-	VideoCtrl();
-	~VideoCtrl();
+    VideoCtrl();
+    ~VideoCtrl();
 
-	bool streamIsRunning;
-	bool initializeCamera(int channel);
-	void startCapture(int channel);
-	void stopCapture(int channel);\
-	void captureFrame(int channel, uint8_t *bytes, uint32_t nbBytes);
-	bool getStreamIsRunningChannel(int channel);
-	void stopStreamAllChannels();
-	std::atomic<bool> videoForceStopStream;
+    void startStreamAllChannels();
+    void stopStreamAllChannels();
+
+    bool initialized() const;
+    void setInitialized(bool newInitialized);
 
 private:
-    std::optional<std::shared_ptr<VideoCtrl>> mVideoChn[MTCE_MAX_STREAM_NUM];
     std::atomic<bool> mInitialized;
+    VideoChannel mVideoChn[4];  // Assuming a maximum of 4 channels for simplicity
 };
- 
-#endif	  // __MTCE_VIDEO_H__
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+#endif  // __VIDEO_HPP__

@@ -1,0 +1,4 @@
+#!/bin/bash
+git add .
+git commit -m"done_step"
+git push origin master
