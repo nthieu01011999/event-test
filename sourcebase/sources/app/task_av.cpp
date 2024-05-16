@@ -43,15 +43,15 @@ void *gw_task_av_entry(void *) {
     APP_DBG("[STARTED] Task AV\n");
     ak_msg_t *msg = AK_MSG_NULL;
 
-    // task_post_pure_msg(GW_TASK_AV_ID, GW_AV_INIT_REQ);
+    task_post_pure_msg(GW_TASK_AV_ID, GW_AV_INIT_REQ);
     // task_post_pure_msg(GW_TASK_AV_ID, GW_AV_CHECK_CAPTURE_RUNNING_REQ);
     // timer_set(GW_TASK_AV_ID, GW_AV_CHECK_VIDEO_STREAM_RUNNING_REQ, 60000, TIMER_ONE_SHOT);
 
     while (1) {
         msg = ak_msg_rev(GW_TASK_AV_ID);
 
-    //     switch (msg->header->sig) {
-    //     case GW_AV_INIT_REQ: {
+        switch (msg->header->sig) {
+        case GW_AV_INIT_REQ: {
     //         APP_DBG_SIG("GW_AV_INIT_REQ\n");
 
     //         // Initialize Camera
@@ -64,7 +64,7 @@ void *gw_task_av_entry(void *) {
     //         // Start Capture
     //         videoCtrl.startCapture(MTCE_MAIN_STREAM);
     //         videoCtrl.startCapture(MTCE_SUB_STREAM);
-    //     } break;
+        } break;
 
 	// 	case GW_AV_CHECK_CAPTURE_RUNNING_REQ: {
 	// 		APP_DBG_SIG("GW_AV_CHECK_CAPTURE_RUNNING_REQ\n");
@@ -93,9 +93,9 @@ void *gw_task_av_entry(void *) {
     //         }
     //     } break;
 
-    //     default:
-    //         break;
-        // }
+        default:
+            break;
+        }
 
     //     // Free the message
         ak_msg_free(msg);

@@ -9,6 +9,40 @@
 using namespace std;
 
 #define MTCE_SERIAL_NUM_DEFAULT		"24010000004"
+
+
+/*****************************************************************************/
+/* task GW_AV define
+ */
+/*****************************************************************************/
+/* define timer */
+#define GW_AV_CHECK_CAPTURE_PROCESS_TIMEOUT_INTERVAL (10000)
+#define GW_AV_AUTO_CONTROL_DAYNIGHT_TIMEOUT_INTERVAL (5000)
+#define GW_AV_VIDEO_SET_ENCODE_TIMEOUT_INTERVAL		 (5000)
+#define GW_AV_OSD_UPDATE_TIME_TEXT_TIMEOUT_INTERVAL	 (1000)
+
+/* define signal */
+
+enum {
+	GW_AV_WATCHDOG_PING_REQ = AK_USER_WATCHDOG_SIG,
+	GW_AV_INIT_REQ			= AK_USER_DEFINE_SIG,
+	GW_AV_SET_CAMERAPARAM_REQ,
+	GW_AV_GET_CAMERAPARAM_REQ,
+	GW_AV_SET_ENCODE_REQ,
+	GW_AV_SET_ENCODE_REQ_TO,
+	GW_AV_APPLY_NEW_ENCODE_REQ,
+	GW_AV_GET_ENCODE_REQ,
+	GW_AV_SET_WATERMARK_REQ,
+	GW_AV_GET_WATERMARK_REQ,
+	GW_AV_CHECK_CAPTURE_RUNNING_REQ,
+	GW_AV_CHECK_VIDEO_STREAM_RUNNING_REQ,
+	GW_AV_RELOAD_PICTURE_REQ,
+	GW_AV_SET_ENCODE_STOP_VIDEO_MAIN_STREAM_RES,
+	GW_AV_SET_ENCODE_STOP_VIDEO_SUB_STREAM_RES,
+	GW_AV_SET_ENCODE_STOP_RTC_AUDIO_STREAM_RES,
+	GW_AV_SET_ENCODE_STOP_RTMP_AUDIO_STREAM_RES,
+};
+
 /*****************************************************************************/
 /*  task GW_TASK_WEBRTC define
  */

@@ -15,7 +15,7 @@ public:
     VideoChannel();
     ~VideoChannel();
 
-    void setConfChannel(const mtce_sizePicture_t &size);
+    void setConfChannel(const mtce_mediaFormat_t *mediaFormat);
     int startStream(int channel);
     void stopStream(int channel);
     bool streamIsRunning;
@@ -36,7 +36,7 @@ public:
 
     bool initialized() const;
     void setInitialized(bool newInitialized);
-
+    int setVideoEncodeChannels(mtce_encode_t *encodeConf);
 private:
     std::atomic<bool> mInitialized;
     VideoChannel mVideoChn[4];  // Assuming a maximum of 4 channels for simplicity

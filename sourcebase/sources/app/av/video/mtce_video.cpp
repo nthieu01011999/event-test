@@ -35,10 +35,17 @@ int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) 
     int err;
     vvtk_video_config_t videoConf;
 
-    // Simplified assumption: Only handling H264 and H265 for testing
+    // First, get the current video configuration
+    err = vvtk_get_video_config(channel, &videoConf);
+    if (err != 0) {
+        APP_DBG("[video] get encode config channel %d error: %d\n", channel, err);
+        return -1;
+    }
+
+    // Set codec based on the input media format
     videoConf.codec = (mediaFormat->format.compression == MTCE_CAPTURE_COMP_H264) ? VVTK_VIDEO_CODEC_H264 : VVTK_VIDEO_CODEC_H265;
 
-    // Set resolution directly from a predefined array based on input format
+    // Set resolution based on predefined settings
     mtce_sizePicture_t size_pic = size_of_picture[mediaFormat->format.resolution];
     videoConf.width = size_pic.width;
     videoConf.height = size_pic.height;
@@ -46,7 +53,7 @@ int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) 
     // Set a default frame rate for testing
     videoConf.frame_rate = 30; // Default to 30 FPS for basic testing
 
-    // Set the video configuration
+    // Apply the updated video configuration
     err = vvtk_set_video_config(channel, &videoConf);
     if (err != 0) {
         APP_DBG("[video] encode set config channel %d error: %d\n", channel, err);
@@ -54,16 +61,17 @@ int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) 
     }
 
     APP_DBG("[video] config encode channel %d success\n", channel);
-    APP_DBG("[video] set resolution [%dx%d]\n", videoConf.width, videoConf.height);
+    APP_DBG("[video] set resolution [%dx%d], codec %s\n", videoConf.width, videoConf.height, (videoConf.codec == VVTK_VIDEO_CODEC_H264 ? "H264" : "H265"));
 
     return 0;
 }
 
+
 // Set configuration for the video channel based on resolution
-void VideoChannel::setConfChannel(const mtce_sizePicture_t &size) {
-    mWidth = size.width;
-    mHeight = size.height;
-    std::cout << "Configuration set: Width = " << mWidth << ", Height = " << mHeight << std::endl;
+void VideoChannel::setConfChannel(const mtce_mediaFormat_t *conf) {
+	mtce_sizePicture_t size_pic = size_of_picture[conf->format.resolution];
+	mWidth						= size_pic.width;
+	mHeight						= size_pic.height;
 }
 
 // Start video streaming on a specific channel
@@ -103,6 +111,34 @@ VideoCtrl::VideoCtrl() : mInitialized(false) {
 // Destructor
 VideoCtrl::~VideoCtrl() {
     std::cout << "Cleaning up VideoCtrl resources." << std::endl;
+}
+
+
+int VideoCtrl::setVideoEncodeChannels(mtce_encode_t *encodeConf) {
+	int err, i;
+	mtce_mediaFormat_t *conf;
+	for (i = 0; i < MTCE_MAX_STREAM_NUM; i++) {
+		conf = (mtce_mediaFormat_t *)encodeConf + i;
+		mVideoChn[i].setConfChannel(conf);
+
+		/*apply config*/
+		err = mVideoChn[i].applyConf(i, conf);
+		if (err != 0) {
+			APP_DBG("[video] encode set config at channel %d err\n", i);
+			return -1;
+		}
+
+		APP_DBG("+++ %s channel +++\n", (i == MTCE_MAIN_STREAM) ? "MAIN" : "SUB");
+		APP_DBG("    - Encode          :	%s\n", (conf->format.compression == MTCE_CAPTURE_COMP_H264) ? "H264" : "H265");
+		APP_DBG("    - Bitrate control :	%s\n", (conf->format.bitRateControl == MTCE_CAPTURE_BRC_CBR) ? "CBR" : "VBR");
+		APP_DBG("    - Resolution      :	%d\n", conf->format.resolution);
+		APP_DBG("    - FPS             :	%d\n", conf->format.FPS);
+		APP_DBG("    - GOP             :	%d\n", conf->format.GOP);
+		APP_DBG("    - Bitreate        :	%d\n", conf->format.bitRate);
+		APP_DBG("    - Quality         :	%d\n", conf->format.quality);
+		APP_DBG("\n");
+	}
+	return 0;
 }
 
 // Start streams on all configured channels
