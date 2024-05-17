@@ -38,6 +38,13 @@ static pthread_mutex_t mtxListClients = PTHREAD_MUTEX_INITIALIZER;
 static int8_t captureRetryCounter = 0;
 static int8_t streamRetryCounter  = 0;
 
+
+
+VideoCtrl videoCtrl;
+
+
+
+
 void *gw_task_av_entry(void *) {
     wait_all_tasks_started();
     APP_DBG("[STARTED] Task AV\n");
@@ -52,18 +59,15 @@ void *gw_task_av_entry(void *) {
 
         switch (msg->header->sig) {
         case GW_AV_INIT_REQ: {
-    //         APP_DBG_SIG("GW_AV_INIT_REQ\n");
-
-    //         // Initialize Camera
-    //         if (!videoCtrl.initializeCamera(MTCE_MAIN_STREAM) || !videoCtrl.initializeCamera(MTCE_SUB_STREAM)) {
-    //             APP_PRINT("Failed to initialize camera\n");
-    //             task_post_pure_msg(GW_TASK_SYS_ID, GW_SYS_REBOOT_REQ);
-    //             break;
-    //         }
-
-    //         // Start Capture
-    //         videoCtrl.startCapture(MTCE_MAIN_STREAM);
-    //         videoCtrl.startCapture(MTCE_SUB_STREAM);
+            APP_DBG_SIG("GW_AV_INIT_REQ\n");
+			mtce_encode_t encode = {0};
+            int ret = videoCtrl.setVideoEncodeChannels(&encode);
+			// if (videoCtrl.setVideoEncodeChannels(&encode) == APP_CONFIG_SUCCESS) {
+            
+            // }
+            // else {
+            //     APP_DBG("setVideoEncodeChannelssetVideoEncodeChannelssetVideoEncodeChannels: Fails\n");
+            // }
         } break;
 
 	// 	case GW_AV_CHECK_CAPTURE_RUNNING_REQ: {

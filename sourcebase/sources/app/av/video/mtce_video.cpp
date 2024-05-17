@@ -33,38 +33,50 @@ VideoChannel::~VideoChannel() {
 
 int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) {
     int err;
+    if (mediaFormat == nullptr) {
+        APP_DBG("[applyConf] Error: mediaFormat pointer is null for channel %d\n", channel);
+        return -1;
+    }
+
     vvtk_video_config_t videoConf;
 
-    // First, get the current video configuration
-    err = vvtk_get_video_config(channel, &videoConf);
-    if (err != 0) {
-        APP_DBG("[video] get encode config channel %d error: %d\n", channel, err);
-        return -1;
-    }
+    APP_DBG("[applyConf] Attempting to retrieve current video configuration for channel %d\n", channel);
 
-    // Set codec based on the input media format
-    videoConf.codec = (mediaFormat->format.compression == MTCE_CAPTURE_COMP_H264) ? VVTK_VIDEO_CODEC_H264 : VVTK_VIDEO_CODEC_H265;
+    // videoConf.codec = VVTK_VIDEO_CODEC_H264;
+    // videoConf.width = 1280;
+    // videoConf.height = 720;
+    // videoConf.encoding_mode = VVTK_VIDEO_ENCODING_MODE_VBR;
+    // videoConf.bitrate_max = 1024 * 1024;
+    // videoConf.bitrate_min = videoConf.bitrate_max * 2/3;
+    // videoConf.frame_rate = 13; //FPS
 
-    // Set resolution based on predefined settings
-    mtce_sizePicture_t size_pic = size_of_picture[mediaFormat->format.resolution];
-    videoConf.width = size_pic.width;
-    videoConf.height = size_pic.height;
+    int gopCal = 13 * 13;  // "GOP" times "FPS"
+    videoConf.gop = gopCal > MTCE_MAX_GOP ? MTCE_MAX_GOP : gopCal;   
 
-    // Set a default frame rate for testing
-    videoConf.frame_rate = 30; // Default to 30 FPS for basic testing
+     videoConf.vbr_quality = static_cast<VVTK_VBR_QUALITY>(20);   
 
-    // Apply the updated video configuration
+    // Apply the configuration
     err = vvtk_set_video_config(channel, &videoConf);
     if (err != 0) {
-        APP_DBG("[video] encode set config channel %d error: %d\n", channel, err);
+        APP_DBG("[video] encode set config channel %d err: %d\n", channel, err);
         return -1;
     }
 
-    APP_DBG("[video] config encode channel %d success\n", channel);
-    APP_DBG("[video] set resolution [%dx%d], codec %s\n", videoConf.width, videoConf.height, (videoConf.codec == VVTK_VIDEO_CODEC_H264 ? "H264" : "H265"));
+    // Print all configuration details
+    APP_DBG("Video Configuration Details:\n");
+    APP_DBG("Codec: %d\n", videoConf.codec);
+    APP_DBG("Width: %d pixels\n", videoConf.width);
+    APP_DBG("Height: %d pixels\n", videoConf.height);
+    APP_DBG("Frame Rate: %d FPS\n", videoConf.frame_rate);
+    APP_DBG("Encoding Mode: %d\n", videoConf.encoding_mode);
+    APP_DBG("GOP Size: %d\n", videoConf.gop);
+    APP_DBG("Min Bitrate: %d Kbps\n", videoConf.bitrate_min);
+    APP_DBG("Max Bitrate: %d Kbps\n", videoConf.bitrate_max);
+    APP_DBG("VBR Quality Level: %d\n", videoConf.vbr_quality);
 
     return 0;
 }
+
 
 
 // Set configuration for the video channel based on resolution
@@ -115,22 +127,24 @@ VideoCtrl::~VideoCtrl() {
 
 
 int VideoCtrl::setVideoEncodeChannels(mtce_encode_t *encodeConf) {
+
 	int err, i;
 	mtce_mediaFormat_t *conf;
 	for (i = 0; i < MTCE_MAX_STREAM_NUM; i++) {
 		conf = (mtce_mediaFormat_t *)encodeConf + i;
 		mVideoChn[i].setConfChannel(conf);
-
-		/*apply config*/
+    
+    APP_DBG("[VideoCtrl] setVideoEncodeChannels.\n");
+	// 	/*apply config*/
 		err = mVideoChn[i].applyConf(i, conf);
-		if (err != 0) {
-			APP_DBG("[video] encode set config at channel %d err\n", i);
-			return -1;
-		}
+		// if (err != 0) {
+		// 	APP_DBG("[video] encode set config at channel %d err\n", i);
+		// 	return -1;
+		// }
 
 		APP_DBG("+++ %s channel +++\n", (i == MTCE_MAIN_STREAM) ? "MAIN" : "SUB");
 		APP_DBG("    - Encode          :	%s\n", (conf->format.compression == MTCE_CAPTURE_COMP_H264) ? "H264" : "H265");
-		APP_DBG("    - Bitrate control :	%s\n", (conf->format.bitRateControl == MTCE_CAPTURE_BRC_CBR) ? "CBR" : "VBR");
+		APP_DBG("    - Bitrate control :	%s\n", (conf->format.bitRateControl == MTCE_CAPTURE_BRC_VBR) ? "CBR" : "VBR");
 		APP_DBG("    - Resolution      :	%d\n", conf->format.resolution);
 		APP_DBG("    - FPS             :	%d\n", conf->format.FPS);
 		APP_DBG("    - GOP             :	%d\n", conf->format.GOP);
