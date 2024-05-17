@@ -20,6 +20,11 @@ public:
     void stopStream(int channel);
     bool streamIsRunning;
     int applyConf(int channel, const mtce_mediaFormat_t *mediaFormat);
+
+protected:
+	void diffSetAndGetConf(vvtk_video_config_t *videoConf, vvtk_video_config_t *tmpConf);
+	VVTK_VBR_QUALITY qualityMaps(int mode);
+    
 private:
     int mWidth;
     int mHeight;
@@ -30,7 +35,7 @@ class VideoCtrl {
 public:
     VideoCtrl();
     ~VideoCtrl();
-
+    int loadConfigFromFileChannels(mtce_encode_t *encodeConf);
     void startStreamAllChannels();
     void stopStreamAllChannels();
 

@@ -97,3 +97,21 @@ int mtce_configGetSerial(char *serial, size_t size) {
 	APP_DBG("serialNo: %s\n", serial);
 	return -1;
 }
+
+int mtce_configGetEncode(mtce_encode_t *encodeCfg) {
+	json cfgJs;
+
+	string fileName = MTCE_ENCODE_FILE;
+	if (mtce_readConfigUsrDfaulFileToJs(cfgJs, fileName)) {
+		return APP_CONFIG_ERROR_FILE_OPEN;
+	}
+
+	if (mtce_jsonGetEncode(cfgJs, encodeCfg)) {
+		APP_DBG("Encode config: %s\n", cfgJs.dump().data());
+		return APP_CONFIG_SUCCESS;
+	}
+	else {
+		APP_DBG("Can not convert: %s\n", fileName.data());
+		return APP_CONFIG_ERROR_DATA_INVALID;
+	}
+}

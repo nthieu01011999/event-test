@@ -76,8 +76,113 @@ int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) 
 
     return 0;
 }
+VVTK_VBR_QUALITY VideoChannel::qualityMaps(int mode) {
+	VVTK_VBR_QUALITY quality = VVTK_VBR_QUALITY_NORMAL;
 
+	switch (mode) {
+	case MTCE_CAPTURE_QUALITY_LOWER: {
+		quality = VVTK_VBR_QUALITY_LOWER;
+	} break;
+	case MTCE_CAPTURE_QUALITY_LOW: {
+		quality = VVTK_VBR_QUALITY_LOW;
+	} break;
+	case MTCE_CAPTURE_QUALITY_NORMAL: {
+		quality = VVTK_VBR_QUALITY_NORMAL;
+	} break;
+	case MTCE_CAPTURE_QUALITY_GOOD: {
+		quality = VVTK_VBR_QUALITY_GOOD;
+	} break;
+	case MTCE_CAPTURE_QUALITY_VERY_GOOD: {
+		quality = VVTK_VBR_QUALITY_VERY_GOOD;
+	} break;
+	case MTCE_CAPTURE_QUALITY_BETTER: {
+		quality = VVTK_VBR_QUALITY_BETTER;
+	} break;
+	case MTCE_CAPTURE_QUALITY_EXCELLENT: {
+		quality = VVTK_VBR_QUALITY_EXCELLENT;
+	} break;
+	case MTCE_CAPTURE_QUALITY_HIGH: {
+		quality = VVTK_VBR_QUALITY_VERY_HIGH;
+	} break;
 
+	default:
+		quality = VVTK_VBR_QUALITY_NORMAL;
+		break;
+	}
+
+	return quality;
+}
+
+// int VideoChannel::applyConf(int channel, const mtce_mediaFormat_t *mediaFormat) {
+// 	int err, gopCal;
+// 	vvtk_video_config_t videoConf, tmpConf;
+// 	VVTK_VIDEO_ENCODING_MODE modeSet;
+// 	VVTK_VIDEO_CODEC codecSet;
+
+// 	if (mediaFormat->format.compression == MTCE_CAPTURE_COMP_H264)
+// 		codecSet = VVTK_VIDEO_CODEC_H264;
+// 	else
+// 		codecSet = VVTK_VIDEO_CODEC_H265;
+
+// 	if (mediaFormat->format.bitRateControl == MTCE_CAPTURE_BRC_CBR)
+// 		modeSet = VVTK_VIDEO_ENCODING_MODE_CBR;
+// 	else if (mediaFormat->format.bitRateControl == MTCE_CAPTURE_BRC_VBR)
+// 		modeSet = VVTK_VIDEO_ENCODING_MODE_VBR;
+// 	else
+// 		modeSet = VVTK_VIDEO_ENCODING_MODE_CVBR;
+// APP_DBG("[BEFORE] get encode config channel %d err: %d\n", channel, err);
+// 	// err = vvtk_get_video_config(channel, &videoConf);
+// 	// if (err != 0) {
+// 	// 	APP_DBG("[video] get encode config channel %d err: %d\n", channel, err);
+// 	// 	return -1;
+// 	// }
+
+// 	videoConf.encoding_mode = modeSet;
+// 	if (videoConf.encoding_mode == VVTK_VIDEO_ENCODING_MODE_VBR) {
+// 		videoConf.vbr_quality = qualityMaps(mediaFormat->format.quality);
+// 	}
+// 	else if (videoConf.encoding_mode == VVTK_VIDEO_ENCODING_MODE_CBR) {
+// 		videoConf.bitrate_max = mediaFormat->format.bitRate * 1024;
+// 	}
+// 	else {
+// 		videoConf.bitrate_max = mediaFormat->format.bitRate * 1024;
+// 		videoConf.bitrate_min = videoConf.bitrate_max * 2 / 3;
+// 	}
+// 	videoConf.codec		 = codecSet;
+// 	videoConf.frame_rate = mediaFormat->format.FPS;
+// 	gopCal = mediaFormat->format.GOP * mediaFormat->format.FPS;
+// 	videoConf.gop		 = gopCal > MTCE_MAX_GOP ? MTCE_MAX_GOP : gopCal;
+// 	videoConf.width		 = mWidth;
+// 	videoConf.height	 = mHeight;
+// 	err					 = vvtk_set_video_config(channel, &videoConf);
+
+//     APP_DBG("[AFTER] get encode config channel %d err: %d\n", channel, err);
+
+// // 	if (err != 0) {
+// // 		APP_DBG("[video] encode set config channel %d err: %d\n", channel, err);
+// // 		return -1;
+// // 	}
+
+// // 	err = vvtk_get_video_config(channel, &tmpConf);
+// // 	if (err != 0) {
+// // 		APP_DBG("[video] encode get config channel %d err: %d\n", channel, err);
+// // 		return -1;
+// // 	}
+
+// // 	if (memcmp(&videoConf, &tmpConf, sizeof(tmpConf)) != 0) {
+// // 		APP_DBG("[video] diff param set and get encode config channel %d\n", channel);
+// // 		APP_DBG(" +++ Difference set & get +++\n");
+// // #ifndef RELEASE
+// // 		diffSetAndGetConf(&videoConf, &tmpConf);
+// // #endif
+// // 		APP_DBG("\n");
+// // 	}
+
+// // 	APP_DBG("[video] config encode channel %d success\n", channel);
+// // 	APP_DBG("[IMPORTANTTTTTTTTTTTTTTTTTT] size resolution [%dx%d]\n", videoConf.width, videoConf.height);
+
+// 	return 0;
+// }
 
 // Set configuration for the video channel based on resolution
 void VideoChannel::setConfChannel(const mtce_mediaFormat_t *conf) {
@@ -113,6 +218,60 @@ void VideoChannel::stopStream(int channel) {
     }
 }
 
+
+
+
+
+
+void VideoChannel::diffSetAndGetConf(vvtk_video_config_t *videoConf, vvtk_video_config_t *tmpConf) {
+	if (videoConf->codec != tmpConf->codec) {
+		APP_DBG("- Diff parma encode Type: set %s & get %s", ((videoConf->codec == VVTK_VIDEO_CODEC_H264) ? "h264" : "h265"),
+				((tmpConf->codec == VVTK_VIDEO_CODEC_H264) ? "h264" : "h265"));
+	}
+	else if (videoConf->frame_rate != tmpConf->frame_rate) {
+		APP_DBG("- Diff param FPS: set %d & get %d", videoConf->frame_rate, tmpConf->frame_rate);
+	}
+	else if (videoConf->gop != tmpConf->gop) {
+		APP_DBG("- Diff param GOP: set %d & get %d", videoConf->gop, tmpConf->gop);
+	}
+	else if (videoConf->encoding_mode != tmpConf->encoding_mode) {
+		APP_DBG("- Diff param bitrate Mode: set %s & get %s",
+				((videoConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_VBR)	  ? "VBR"
+				 : (videoConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_CBR) ? "CBR"
+																			  : "CVBR"),
+				((tmpConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_VBR)	? "VBR"
+				 : (tmpConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_CBR) ? "CBR"
+																			: "CVBR"));
+	}
+	else if (videoConf->vbr_quality != tmpConf->vbr_quality) {
+		if (videoConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_VBR)
+			APP_DBG("- Diff param Quality: set %d & get %d", videoConf->vbr_quality, tmpConf->vbr_quality);
+	}
+	else if (videoConf->bitrate_max != tmpConf->bitrate_max || videoConf->bitrate_min != tmpConf->bitrate_min) {
+		if (videoConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_CVBR) {
+			APP_DBG("- Diff param bitrate max: set %d & get %d", videoConf->bitrate_max, tmpConf->bitrate_max);
+			APP_DBG("- Diff param bitrate min: set %d & get %d", videoConf->bitrate_min, tmpConf->bitrate_min);
+		}
+		else if (videoConf->encoding_mode == VVTK_VIDEO_ENCODING_MODE_CBR) {
+			APP_DBG("- Diff param bitrate max: set %d & get %d", videoConf->bitrate_max, tmpConf->bitrate_max);
+		}
+	}
+	else if (videoConf->width != tmpConf->width || videoConf->height != tmpConf->height) {
+		APP_DBG("- Diff parma set resolution: set [%dx%d] & get [%dx%d]", videoConf->width, videoConf->height, tmpConf->width, tmpConf->height);
+	}
+	else {
+		APP_DBG("[video] not diff set and get config");
+	}
+}
+
+
+
+
+
+
+
+
+
 // VideoCtrl Class Definitions
 
 // Constructor
@@ -125,6 +284,23 @@ VideoCtrl::~VideoCtrl() {
     std::cout << "Cleaning up VideoCtrl resources." << std::endl;
 }
 
+int VideoCtrl::loadConfigFromFileChannels(mtce_encode_t *encodeConf) {
+	int err;
+
+	err = mtce_configGetEncode(encodeConf);
+	if (err != 0) {
+		APP_DBG("[video] get config from to file err\n");
+		return err;
+	}
+
+	// err = verifyConfig(encodeConf);
+	// if (err != 0) {
+	// 	APP_DBG("[video] Verify config encode err\n");
+	// 	return err;
+	// }
+
+	return APP_CONFIG_SUCCESS;
+}
 
 int VideoCtrl::setVideoEncodeChannels(mtce_encode_t *encodeConf) {
 
@@ -187,3 +363,5 @@ void VideoCtrl::setInitialized(bool newInitialized) {
     mInitialized = newInitialized;
     std::cout << "Initialization status set to " << (newInitialized ? "true" : "false") << std::endl;
 }
+
+

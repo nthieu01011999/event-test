@@ -7,5 +7,5 @@
 
 
 extern bool mtce_jsonGetRtcServers(const json &json_in, rtcServersConfig_t *rtcSvCfg);
-
+extern bool mtce_jsonGetEncode(json &json_in, mtce_encode_t *param);
 #endif // PARSER_JSON_H

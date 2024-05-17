@@ -101,6 +101,78 @@ enum {
 	GW_CLOUD_MESSAGE_LENGTH_OUT_OF_RANGE_REP,
 };
 
+/*****************************************************************************/
+/*  global define variable
+ */
+/*****************************************************************************/
+#define APP_OK (0x00)
+#define APP_NG (0x01)
+
+#define APP_FLAG_OFF (0x00)
+#define APP_FLAG_ON	 (0x01)
+
+/* define file name */
+#define MTCE_SERIAL_FILE			"Serial"
+#define MTCE_ACCOUNT_FILE			"Account"
+#define MTCE_P2P_FILE				"P2P"
+#define MTCE_ENCODE_FILE			"Encode"
+#define MTCE_DEVINFO_FILE			"DeviceInfo"
+#define MTCE_MOTION_FILE			"Motion"
+#define MTCE_WIFI_FILE				"Wifi"
+#define MTCE_WATERMARK_FILE			"Watermark"
+#define MTCE_S3_FILE				"S3"
+#define MTCE_RTMP_FILE				"RTMP"
+#define MTCE_NETWORK_CA_FILE		"Bundle_RapidSSL_2023.cert"
+#define MTCE_NETWORK_MQTT_FILE		"MQTTService"
+#define MTCE_NETWORK_WPA_FILE		"wpa_supplicant.conf"
+#define MTCE_CAMERA_PARAM_FILE		"CameraParam"
+#define MTCE_PTZ_FILE				"PTZ"
+#define MTCE_LOG_FILE				"app.log"
+#define MTCE_RTC_SERVERS_FILE		"RtcServersConfig"
+#define MTCE_STORAGE_FILE			"Storage"
+#define MTCE_RECORD_FILE			"Record"
+#define MTCE_CHECKSUM_FILE			"SdChecksumFile"
+#define MTCE_OTA_STATUS				"OTAStatus"
+#define MTCE_IO_DRIVER_CONTROL_FILE "IoControl"
+#define MTCE_RAINBOW_FILE			"rainbow.json"
+#define MTCE_OWNER_STATUS			"OwnerStatus"
+#define MTCE_ALARM_CONTROL_FILE		"AlarmControl"
+#define MTCE_STEP_MOTOR_FILE		"StepMotors"
+#define MTCE_SERIAL_NUM_DEFAULT		"24010000004"
+#define MTCE_MAC_DEFAULT			"00:E0:4C:35:00:00"
+
+/* define path name */
+#define MTCE_DEVICE_SOUND_PATH		   "/app/sound"
+#define MTCE_DEVICE_INFO_PATH		   "/app/version"
+#define MTCE_USER_CONF_PATH			   "/usr/conf"
+#define MTCE_DFAUL_CONF_PATH		   "/app/default"
+#define MTCE_LOG_FILE_PATH			   MTCE_USER_CONF_PATH "/log"
+#define MTCE_MEDIA_JPEG_PATH		   "/tmp/jpeg"
+#define MTCE_MEDIA_MP4_PATH			   "/tmp/mp4"
+#define MTCE_SDCARD_CHECKSUM_FILE_PATH "/tmp/sdFileInfo"
+
+/* use for wifi and network */
+#define MTCE_NET_WIRED_IF_NAME		  "eth0"
+#define MTCE_NET_WIFI_STA_IF_NAME	  "wlan0"
+#define MTCE_NET_WIFI_AP_IF_NAME	  "wlan1"
+#define MTCE_UDHCPC_SCRIPT			  "/app/bin/udhcpc.sh"
+#define MTCE_NET_UDHCPC_PID_FILE	  "/var/run/%s.pid"
+#define MTCE_NET_WIFI_AP_UDHCPD_FILE  "/tmp/udhcpd.conf"
+#define MTCE_NET_WIFI_AP_HOSTADP_FILE "/tmp/hostapd.conf"
+#define MTCE_NET_WIFI_STA_WPA_FILE	  "/tmp/wpa_supplicant.conf"
+
+#define MTCE_AUDIO_AAC_EXT	".aac"
+#define MTCE_AUDIO_G711_EXT ".g711"
+
+#define MTCE_MQTT_KEEPALIVE	 90
+#define MTCE_SSL_VERIFY_NONE 0
+#define MTCE_SSL_VERIFY_PEER 1
+
+#define MTCE_SOUND_REBOOT_DEVICE_FILE		"reboot_device.g711a"
+#define MTCE_SOUND_WAIT_CONNECT_FILE		"waiting_for_connection.g711a"
+#define MTCE_SOUND_HELLO_DEVICE_FILE		"hello_fpt_camera.g711a"
+#define MTCE_SOUND_NET_CONNECT_SUCCESS_FILE "connection_success.g711a"
+#define MTCE_SOUND_MOTION_ALARM_FILE		"motion_alarm.g711a"
 extern CppTime::Timer systemTimer;
 
 #endif	  // __APP_H__

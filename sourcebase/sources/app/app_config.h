@@ -26,4 +26,5 @@ using json = nlohmann::json; // Alias nlohmann::json to json
 extern int configGetRtcServers(rtcServersConfig_t *rtcServerCfg);
 int mtce_readConfigUsrDfaulFileToJs(json &cfgJs, string &file);
 extern int mtce_configGetSerial(char *serial, size_t size);
+extern int mtce_configGetEncode(mtce_encode_t *encodeCfg);
 #endif    // __APP_CONFIG_H__
