@@ -214,10 +214,10 @@ void Stream::MediaLiveVideo(bool isFullHD, uint8_t *samples, uint32_t totalSampl
 	extern ClientsGroup_t clients;
 	extern optional<shared_ptr<Stream>> avStream;
 
-	APP_DBG("MediaLiveVideo: Enter function\n");
+	APP_DBG("[MediaLiveVideo]: Enter function\n");
 
 	if (!avStream.has_value() || clients.empty()) {
-		APP_DBG("MediaLiveVideo: No active stream or clients available\n");
+		APP_DBG("MediaLiveVideo: NO active stream or clients available\n");
 		return;
 	}
 
@@ -226,7 +226,7 @@ void Stream::MediaLiveVideo(bool isFullHD, uint8_t *samples, uint32_t totalSampl
 
 	Stream::pubLicStreamPOSIXMutexLOCK();
 	{
-		APP_DBG("MediaLiveVideo: Acquired stream lock\n");
+		APP_DBG("MediaLiveVideo: Acquired stream LOCK\n");
 		syncLiveWaitTime(avStreamValue);
 		avStreamValue->mediaLive->video->loadNextTime();
 		avStreamValue->mediaLive->loadNextSample(samples, totalSamples, StreamSourceType::Video);
