@@ -86,16 +86,16 @@ public:
 	void removeTimeoutConnect();
 
 	/* Media Stream Methods (Live & PLayBack) */
-	// void setMediaStreamOptions(eOptions opt);
+	void setMediaStreamOptions(eOptions opt);
 	eOptions getMediaStreamOptions();
-	// void setLiveResolution(LiveStream::eResolution res);
+	void setLiveResolution(LiveStream::eResolution res);
 	LiveStream::eResolution getLiveResolution();
-	// void assignRecord(std::string pathToRecords, std::string dateTime, std::string desc);
-	// void setPbControl(PlayBack::ePbControl pbc, uint32_t *argv);
-	// PlayBack::ePbStatus getPbStatus();
-	// uint32_t getPbTimeSpentInSecs();
-	// SDSource *getVideoPbAttributes();
-	// SDSource *getAudioPbAttributes();
+	void assignRecord(std::string pathToRecords, std::string dateTime, std::string desc);
+	void setPbControl(PlayBack::ePbControl pbc, uint32_t *argv);
+	PlayBack::ePbStatus getPbStatus();
+	uint32_t getPbTimeSpentInSecs();
+	SDSource *getVideoPbAttributes();
+	SDSource *getAudioPbAttributes();
 
 	std::string getId();
 	void setId(const std::string &newId);
@@ -122,7 +122,7 @@ private:
 	void openPbSession();
 	void closePbSession();
 	void seekPosRecordInSecs(uint32_t inSecs);
-	// void setPbSpeed(PlayBack::ePbSpeedLoad speed);
+	void setPbSpeed(PlayBack::ePbSpeedLoad speed);
 
 	int getTimerConnectId();
 	void setTimerConnectId(size_t newTimerConnectId);
@@ -141,9 +141,9 @@ private:
 
 	eOptions mOptions						= eOptions::Idle;
 	LiveStream::eResolution mLiveResolution = LiveStream::eResolution::HD720p;
-	// PlayBack::ePbStatus mPbStatus			= PlayBack::ePbStatus::Stopped;
-	// SDSource mVideoPbAttributes;
-	// SDSource mAudioPbAttributes;
+	PlayBack::ePbStatus mPbStatus			= PlayBack::ePbStatus::Stopped;
+	SDSource mVideoPbAttributes;
+	SDSource mAudioPbAttributes;
 
 	static pthread_mutex_t mtxSignaling;
 	static bool isSignalingRunning;

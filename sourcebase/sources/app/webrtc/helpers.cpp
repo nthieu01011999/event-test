@@ -158,11 +158,11 @@ void Client::setTimerConnectId(size_t newTimerConnectId) {
  *		setPbSpeed
  *-----------------------------------------------------------------------------------------
  */
-// void Client::setMediaStreamOptions(eOptions opt) {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	mOptions = opt;
-// 	pthread_mutex_unlock(&mPOSIXMutex);
-// }
+void Client::setMediaStreamOptions(eOptions opt) {
+	pthread_mutex_lock(&mPOSIXMutex);
+	mOptions = opt;
+	pthread_mutex_unlock(&mPOSIXMutex);
+}
 
 Client::eOptions Client::getMediaStreamOptions() {
 	pthread_mutex_lock(&mPOSIXMutex);
@@ -172,11 +172,11 @@ Client::eOptions Client::getMediaStreamOptions() {
 	return ret;
 }
 
-// void Client::setLiveResolution(LiveStream::eResolution res) {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	mLiveResolution = res;
-// 	pthread_mutex_unlock(&mPOSIXMutex);
-// }
+void Client::setLiveResolution(LiveStream::eResolution res) {
+	pthread_mutex_lock(&mPOSIXMutex);
+	mLiveResolution = res;
+	pthread_mutex_unlock(&mPOSIXMutex);
+}
 
 LiveStream::eResolution Client::getLiveResolution() {
 	pthread_mutex_lock(&mPOSIXMutex);
@@ -302,18 +302,18 @@ LiveStream::eResolution Client::getLiveResolution() {
 // 	mVideoPbAttributes.nbrNalusLoad = mAudioPbAttributes.nbrNalusLoad = n;
 // }
 
-// PlayBack::ePbStatus Client::getPbStatus() {
-// 	pthread_mutex_lock(&mPOSIXMutex);
+PlayBack::ePbStatus Client::getPbStatus() {
+	pthread_mutex_lock(&mPOSIXMutex);
 
-// 	auto ret = mPbStatus;
-// 	if (mVideoPbAttributes.track >= mVideoPbAttributes.fileSize) {
-// 		ret = PlayBack::ePbStatus::Done;
-// 	}
+	auto ret = mPbStatus;
+	if (mVideoPbAttributes.track >= mVideoPbAttributes.fileSize) {
+		ret = PlayBack::ePbStatus::Done;
+	}
 
-// 	pthread_mutex_unlock(&mPOSIXMutex);
+	pthread_mutex_unlock(&mPOSIXMutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
 // void Client::seekPosRecordInSecs(uint32_t inSecs) {
 // 	if (inSecs < mVideoPbAttributes.durationInSec) {
@@ -322,29 +322,29 @@ LiveStream::eResolution Client::getLiveResolution() {
 // 	}
 // }
 
-// uint32_t Client::getPbTimeSpentInSecs() {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	auto ret = (uint32_t)(((double)mVideoPbAttributes.track / mVideoPbAttributes.fileSize) * mVideoPbAttributes.durationInSec);
-// 	pthread_mutex_unlock(&mPOSIXMutex);
+uint32_t Client::getPbTimeSpentInSecs() {
+	pthread_mutex_lock(&mPOSIXMutex);
+	auto ret = (uint32_t)(((double)mVideoPbAttributes.track / mVideoPbAttributes.fileSize) * mVideoPbAttributes.durationInSec);
+	pthread_mutex_unlock(&mPOSIXMutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
-// SDSource *Client::getVideoPbAttributes() {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	auto ret = (&mVideoPbAttributes);
-// 	pthread_mutex_unlock(&mPOSIXMutex);
+SDSource *Client::getVideoPbAttributes() {
+	pthread_mutex_lock(&mPOSIXMutex);
+	auto ret = (&mVideoPbAttributes);
+	pthread_mutex_unlock(&mPOSIXMutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
-// SDSource *Client::getAudioPbAttributes() {
-// 	pthread_mutex_lock(&mPOSIXMutex);
-// 	auto ret = (&mAudioPbAttributes);
-// 	pthread_mutex_unlock(&mPOSIXMutex);
+SDSource *Client::getAudioPbAttributes() {
+	pthread_mutex_lock(&mPOSIXMutex);
+	auto ret = (&mAudioPbAttributes);
+	pthread_mutex_unlock(&mPOSIXMutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
 string Client::getId() {
 	return mId;

@@ -1,4 +1,4 @@
 #!/bin/bash
 git add .
-git commit -m"Initialization status set to true"
+git commit -m"first state of your project is indeed complete"
 git push origin master

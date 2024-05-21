@@ -51,8 +51,7 @@ public:
 	static void MediaLiveAudio(uint8_t *, uint32_t);
 };
 
-// extern optional<shared_ptr<Stream>> avStream;
-
+ 
 #endif /* __STREAM_H */
 
 /*

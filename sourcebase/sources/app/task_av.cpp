@@ -57,16 +57,20 @@ void *gw_task_av_entry(void *) {
         msg = ak_msg_rev(GW_TASK_AV_ID);
 
         switch (msg->header->sig) {
+
         case GW_AV_INIT_REQ: {
             APP_DBG_SIG("GW_AV_INIT_REQ\n");
+            
 			mtce_encode_t encode = {0};
-            if (videoCtrl.loadConfigFromFileChannels(&encode) == APP_CONFIG_SUCCESS) {
-            int ret = videoCtrl.setVideoEncodeChannels(&encode);
-            APP_DBG("[loadConfigFromFileChannels]\n");
-            videoCtrl.setVideoEncodeConfig(&encode);
-            videoCtrl.startStreamAllChannels();
-            // videoCtrl.
-            }
+            
+            // if (videoCtrl.loadConfigFromFileChannels(&encode) == APP_CONFIG_SUCCESS) {
+            // int ret = videoCtrl.setVideoEncodeChannels(&encode);
+            // APP_DBG("[loadConfigFromFileChannels]\n");
+            // videoCtrl.setVideoEncodeConfig(&encode);
+            // videoCtrl.startStreamAllChannels();
+     
+            // }
+
         } break;
 
         case GW_AV_SET_ENCODE_STOP_VIDEO_MAIN_STREAM_RES:

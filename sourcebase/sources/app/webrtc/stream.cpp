@@ -20,7 +20,6 @@
 
 std::vector<std::byte> Stream::nalUnitsMain;
 std::vector<std::byte> Stream::nalUnitsSub;
-std::optional<std::shared_ptr<Stream>> avStream = std::nullopt; // Definition of avStream
 
 Stream::Stream(std::shared_ptr<MediaStream> mediaLive, std::shared_ptr<MediaStream> mediaPLayback)
 	: std::enable_shared_from_this<Stream>(), mediaLive(mediaLive), mediaPLayback(mediaPLayback) {

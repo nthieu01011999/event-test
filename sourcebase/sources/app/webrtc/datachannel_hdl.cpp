@@ -19,8 +19,8 @@
 #include "datachannel_hdl.h"
 #include "json.hpp"
 // #include "SDCard.h"
-// #include "helpers.hpp"
-// #include "h26xsource.hpp"
+#include "helpers.hpp"
+#include "h26xsource.hpp"
 #include "utils.h"
 // #include "utilitiesd.hpp"
 // #include "io_driver.h"
@@ -82,80 +82,119 @@ int disconnectHdl(json &content, bool &respFlag) {
 }
 
 int streamHdl(json &content, bool &respFlag) {
+    (void)(respFlag);
+    int rc = APP_CONFIG_SUCCESS;
+    APP_DBG("streamHdl() -> %s\n", content.dump(4).c_str());
 
-	APP_DBG("HELLO WORLKD\n");
-// 	(void)(respFlag);
-	int rc = APP_CONFIG_SUCCESS;
-// 	APP_DBG("streamHdl() -> %s\n", content.dump(4).c_str());
-// #if (CHECK_TIME_EXE == 1)
-// 	std::cout << "[EXEC-TIME] streamHdl\n";
-// 	auto start = std::chrono::high_resolution_clock::now();
-// #endif
+#if (CHECK_TIME_EXE == 1)
+    std::cout << "[EXEC-TIME] streamHdl\n";
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
 
-// 	Client::eOptions opt		= content["Option"].get<Client::eOptions>();
-// 	LiveStream::eResolution res = content["Resolution"].get<LiveStream::eResolution>();
+    // Parse options and resolution from content
+    Client::eOptions opt = content["Option"].get<Client::eOptions>();
+    LiveStream::eResolution res = content["Resolution"].get<LiveStream::eResolution>();
 
-// 	if ((opt != Client::eOptions::Idle && opt != Client::eOptions::LiveStream && opt == Client::eOptions::Playback) ||
-// 		(res != LiveStream::eResolution::HD720p && res != LiveStream::eResolution::FullHD1080p)) {
-// 		return APP_CONFIG_ERROR_DATA_INVALID;
-// 	}
+    APP_DBG("Parsed options: Option=%d, Resolution=%d\n", opt, res);
 
-// 	auto it = clients.find(qrId);
-// 	if (it == clients.end()) {
-// 		return APP_CONFIG_ERROR_ANOTHER;
-// 	}
-// 	auto qrClient = it->second;
+    // Validate options and resolution
+    if ((opt != Client::eOptions::Idle && opt != Client::eOptions::LiveStream && opt != Client::eOptions::Playback) ||
+        (res != LiveStream::eResolution::HD720p && res != LiveStream::eResolution::FullHD1080p)) {
+        APP_DBG("Invalid option or resolution\n");
+        return APP_CONFIG_ERROR_DATA_INVALID;
+    }
 
-// 	/* Send previous NALU key frame so users don't have to wait to see stream works */
-// 	bool isRstTimestamp = false;
-// 	if (qrClient->getMediaStreamOptions() != Client::eOptions::LiveStream) {
-// 		isRstTimestamp = true;
-// 	}
-// 	if (opt == Client::eOptions::LiveStream) {
-// 		// if (opt == Client::eOptions::LiveStream && qrClient->getMediaStreamOptions() != Client::eOptions::LiveStream) {
-// 		Stream::pubLicStreamPOSIXMutexLOCK();
+    // Find the client
+    auto it = clients.find(qrId);
+    if (it == clients.end()) {
+        APP_DBG("Client not found\n");
+        return APP_CONFIG_ERROR_ANOTHER;
+    }
+    auto qrClient = it->second;
+    APP_DBG("Client found\n");
 
-// 		auto avStreamValue = avStream.value();
-// 		auto h264		   = dynamic_cast<H26XSource *>(avStreamValue->mediaLive->video.get());
-// 		auto nalUnits	   = (res == LiveStream::eResolution::FullHD1080p) ? (Stream::nalUnitsSub) : (Stream::nalUnitsMain);
+    // Check and set timestamp reset flag
+    bool isRstTimestamp = qrClient->getMediaStreamOptions() != Client::eOptions::LiveStream;
 
-// 		Stream::pubLicStreamPOSIXMutexUNLOCK();
+    // Handle LiveStream option
+    if (opt == Client::eOptions::LiveStream) {
+        Stream::pubLicStreamPOSIXMutexLOCK();
 
-// 		if (nalUnits.size()) {
-// 			std::cout << "Send Initial NAL Units size " << nalUnits.size() << std::endl;
+        if (!avStream.has_value()) {
+            Stream::pubLicStreamPOSIXMutexUNLOCK();
+            APP_DBG("avStream does not have a value\n");
+            return APP_CONFIG_ERROR_ANOTHER;
+        }
 
-// 			lockMutexListClients();
+        auto avStreamValue = avStream.value();
 
-// 			auto video = qrClient->video.value();
-// 			if (isRstTimestamp) {
-// 				const double frameDuration_s		  = double(h264->getSampleDuration_us()) / (1000 * 1000);
-// 				const uint32_t frameTimestampDuration = video->sender->rtpConfig->secondsToTimestamp(frameDuration_s);
-// 				video->sender->rtpConfig->timestamp	  = video->sender->rtpConfig->startTimestamp - frameTimestampDuration * 2;
-// 			}
+        // Obtain a shared pointer to the video source
+        APP_DBG("Attempting to get video source and cast to H26XSource\n");
+        auto videoSource = avStreamValue->mediaLive->video;
 
-// 			try {
-// 				video->track->send(nalUnits);
-// 			}
-// 			catch (...) {
-// 			}
+        // Attempt to cast the video source to an H26XSource pointer
+        H26XSource *h264 = dynamic_cast<H26XSource *>(videoSource.get());
 
-// 			unlockMutexListClients();
-// 		}
-// 		else {
-// 			std::cout << "Initial NAL Units not found" << std::endl;
-// 		}
-// 	}
+        // Check if the cast was successful
+        if (!h264) {
+            Stream::pubLicStreamPOSIXMutexUNLOCK();
+            APP_DBG("Failed to cast video source to H26XSource\n");
+            return APP_CONFIG_ERROR_ANOTHER;
+        }
 
-// 	qrClient->setMediaStreamOptions(opt);
-// 	qrClient->setLiveResolution(res);
+        APP_DBG("Successfully cast video source to H26XSource\n");
 
-// 	content.clear();
+        // Determine the appropriate NAL units based on the resolution
+        auto nalUnits = (res == LiveStream::eResolution::FullHD1080p) ? Stream::nalUnitsSub : Stream::nalUnitsMain;
 
-// #if (CHECK_TIME_EXE == 1)
-// 	auto end										   = std::chrono::high_resolution_clock::now();
-// 	std::chrono::duration<double, std::milli> duration = end - start;
-// 	std::cout << "[EXEC-TIME] streamHdl exe time: " << duration.count() << " milliseconds\n";
-// #endif
+        Stream::pubLicStreamPOSIXMutexUNLOCK();
+        APP_DBG("NAL Units size: %d\n", nalUnits.size());
 
-	return rc;
+        if (!nalUnits.empty()) {
+            lockMutexListClients();
+
+            if (!qrClient->video.has_value()) {
+                APP_DBG("qrClient->video does not have a value\n");
+                unlockMutexListClients();
+                return APP_CONFIG_ERROR_ANOTHER;
+            }
+
+            auto video = qrClient->video.value();
+
+            // Reset timestamp if needed
+            if (isRstTimestamp) {
+                const double frameDuration_s = static_cast<double>(h264->getSampleDuration_us()) / (1000 * 1000);
+                const uint32_t frameTimestampDuration = video->sender->rtpConfig->secondsToTimestamp(frameDuration_s);
+                video->sender->rtpConfig->timestamp = video->sender->rtpConfig->startTimestamp - frameTimestampDuration * 2;
+                APP_DBG("Timestamp reset for video stream\n");
+            }
+
+            // Send NAL Units
+            try {
+                video->track->send(nalUnits);
+                APP_DBG("Sent NAL Units successfully\n");
+            } catch (const std::exception &e) {
+                APP_DBG("Exception while sending NAL Units: %s\n", e.what());
+            }
+
+            unlockMutexListClients();
+        } else {
+            APP_DBG("No NAL Units found\n");
+        }
+    }
+
+    // Update client media stream options and resolution
+    qrClient->setMediaStreamOptions(opt);
+    qrClient->setLiveResolution(res);
+
+    content.clear();
+
+#if (CHECK_TIME_EXE == 1)
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "[EXEC-TIME] streamHdl exe time: " << duration.count() << " milliseconds\n";
+#endif
+
+    APP_DBG("Returning success [STREAM]\n");
+    return rc;
 }

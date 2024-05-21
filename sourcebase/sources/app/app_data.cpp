@@ -20,7 +20,7 @@
 extern VideoCtrl videoCtrl;
 static pthread_mutex_t mtxStreamVideo = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mtxListClients = PTHREAD_MUTEX_INITIALIZER;
-
+optional<shared_ptr<Stream>> avStream;
 
 ClientsGroup_t clients;
  
@@ -37,27 +37,32 @@ std::string mtce_getSerialInfo() {
 }
 
 void sendMsgControlDataChannel(const string &id, const string &msg) {
-	if (msg.empty())
-		return;
-	
-	lockMutexListClients();
-	if (auto jt = clients.find(id); jt != clients.end()) {
-		auto dc = jt->second->dataChannel.value();
-		APP_PRINT("Send message to %s\n", id.c_str());
-		try {
-			if (dc->isOpen()) {
-				dc->send(msg);
-			}
-		}
-		catch (const exception &error) {
-			APP_DBG("%s\n", error.what());
-		}
-	}
-	else {
-		APP_PRINT("%s not found\n", id.c_str());
-	}
-	unlockMutexListClients();
+    if (msg.empty()) {
+        return;
+    }
+
+    lockMutexListClients();
+    if (auto jt = clients.find(id); jt != clients.end()) {
+        auto dc = jt->second->dataChannel.value();
+        APP_DBG("Send message to %s\n", id.c_str());
+        try {
+            if (dc->isOpen()) {
+                APP_DBG("Message content: %s\n", msg.c_str());
+                dc->send(msg);
+            } else {
+                APP_DBG("DataChannel is not open for client %s\n", id.c_str());
+            }
+        }
+        catch (const exception &error) {
+            APP_DBG("%s\n", error.what());
+        }
+    }
+    else {
+        APP_PRINT("%s not found\n", id.c_str());
+    }
+    unlockMutexListClients();
 }
+
 
 void printMemoryUsage() {
     struct rusage usage;
@@ -81,7 +86,7 @@ void onSampleVideoCapture(int channel, uint8_t *bytes, uint32_t nbBytes) {
 	if (channel == MTCE_MAIN_STREAM) {
 		isFullHD = true;
 	}
-	
+
 	Stream::pubLicStreamPOSIXMutexLOCK();
 	auto nalUnits = H26XSource::ExtractSeqNALUS(bytes, nbBytes);
 	if (nalUnits.size()) {

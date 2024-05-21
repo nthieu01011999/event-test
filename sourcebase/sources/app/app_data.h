@@ -32,6 +32,8 @@ typedef struct {
 	}
 } rtcServersConfig_t;
 
+
+extern optional<shared_ptr<Stream>> avStream;
 extern void lockMutexListClients();
 extern void unlockMutexListClients();
 extern void sendMsgControlDataChannel(const string &id, const string &msg);
