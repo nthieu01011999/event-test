@@ -31,7 +31,21 @@ extern "C"
 
     typedef enum
     {
+        VVTK_VBR_QUALITY_VERY_HIGH = 22,
+        VVTK_VBR_QUALITY_HIGH = 26,
+        VVTK_VBR_QUALITY_EXCELLENT = 30,
+        VVTK_VBR_QUALITY_BETTER = 32,
+        VVTK_VBR_QUALITY_VERY_GOOD = 34,
+        VVTK_VBR_QUALITY_GOOD = 36,
+        VVTK_VBR_QUALITY_NORMAL = 38,
+        VVTK_VBR_QUALITY_LOW = 40,
+        VVTK_VBR_QUALITY_LOWER = 42
+    } VVTK_VBR_QUALITY;
+
+    typedef enum
+    {
         VVTK_VIDEO_ENCODING_MODE_CBR = 0,
+        VVTK_VIDEO_ENCODING_MODE_CVBR,
         VVTK_VIDEO_ENCODING_MODE_VBR,
     } VVTK_VIDEO_ENCODING_MODE;
 
@@ -49,10 +63,11 @@ extern "C"
         int width;                              /**> The width of a video frame, in pixels */
         int height;                             /**> The height of a video frame, in pixels */
         int frame_rate;                         /**> The frame rate to be captured. (1-30 fps, frames per second) */
-        VVTK_VIDEO_ENCODING_MODE encoding_mode; /**> VBR or CBR */
+        VVTK_VIDEO_ENCODING_MODE encoding_mode; /**> CBR/CVBR/VBR */
         int gop;                                /**> Group of pictures of the stream. (1-30) */
-        int bitrate_min;                        /**> The minimum bitrate (Kbps) */
-        int bitrate_max;                        /**> The maximum bitrate (Kbps), CBR will reference bitrate_max only */
+        int bitrate_min;                        /**> The minimum bitrate (Kbps), used in CVBR. */
+        int bitrate_max;                        /**> The maximum bitrate (Kbps), used in CBR/CVBR. CBR will reference bitrate_max only */
+        VVTK_VBR_QUALITY vbr_quality;           /**> The VBR quality, used in VBR */
     } vvtk_video_config_t;
 
     typedef struct
@@ -136,7 +151,8 @@ extern "C"
      * @see vvtk_video_config_t
      *
      * @param index Video Stream Index (0, 1, 2 or 3)
-     * @param config The settings used for capturing and encoding the video stream
+     * @param config The settings used for capturing and encoding the video stream. If the encoding_mode is VBR, vbr_quality will effect after config.
+     *               But after reboot, vbr_quality will restore to VVTK_VBR_QUALITY_EXCELLENT, you need reconfig to another value. 
      * @return VVTK_RET_SUCCESS for setting succeed, VVTK_RET_NOT_SUPPORTED presents the requested configuration is not supported for this device or other VVTK_RET error(s)
      */
     VVTK_RET vvtk_set_video_config(int index, const vvtk_video_config_t *config);

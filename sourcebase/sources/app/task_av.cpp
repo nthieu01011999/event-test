@@ -64,9 +64,14 @@ void *gw_task_av_entry(void *) {
             if (videoCtrl.loadConfigFromFileChannels(&encode) == APP_CONFIG_SUCCESS) {
             int ret = videoCtrl.setVideoEncodeChannels(&encode);
             APP_DBG("[loadConfigFromFileChannels]\n");
+            videoCtrl.setVideoEncodeConfig(&encode);
+            videoCtrl.startStreamAllChannels();
+            // videoCtrl.
             }
         } break;
 
+        case GW_AV_SET_ENCODE_STOP_VIDEO_MAIN_STREAM_RES:
+        case GW_AV_SET_ENCODE_STOP_VIDEO_SUB_STREAM_RES:
 	// 	case GW_AV_CHECK_CAPTURE_RUNNING_REQ: {
 	// 		APP_DBG_SIG("GW_AV_CHECK_CAPTURE_RUNNING_REQ\n");
 

@@ -88,6 +88,11 @@
         "barrier": "cpp",
         "latch": "cpp",
         "semaphore": "cpp",
-        "syncstream": "cpp"
+        "syncstream": "cpp",
+        "vvtk_io.h": "c",
+        "vvtk_def.h": "c",
+        "vvtk_wifi.h": "c",
+        "vvtk_video.h": "c",
+        "test_video_api.h": "c"
     }
 }

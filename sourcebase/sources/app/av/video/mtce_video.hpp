@@ -42,9 +42,13 @@ public:
     bool initialized() const;
     void setInitialized(bool newInitialized);
     int setVideoEncodeChannels(mtce_encode_t *encodeConf);
+    int verifyConfig(mtce_encode_t *encodeConf);
+	void setVideoEncodeConfig(const mtce_encode_t *newEncodeChannels);
+    void printEncodeConfig();
 private:
-    std::atomic<bool> mInitialized;
-    VideoChannel mVideoChn[4];  // Assuming a maximum of 4 channels for simplicity
+	VideoChannel mVideoChn[MTCE_MAX_STREAM_NUM];
+	mtce_encode_t mEncodeConfig;
+	std::atomic<bool> mInitialized;
 };
 
 #endif  // __VIDEO_HPP__

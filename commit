@@ -1,4 +1,4 @@
 #!/bin/bash
 git add .
-git commit -m"done_step"
+git commit -m"Initialization status set to true"
 git push origin master
