@@ -215,15 +215,19 @@ void Stream::MediaLiveVideo(bool isFullHD, uint8_t *samples, uint32_t totalSampl
 	extern ClientsGroup_t clients;
 	extern optional<shared_ptr<Stream>> avStream;
 
-		if (!avStream.has_value() || clients.empty()) {
+	APP_DBG("MediaLiveVideo: Enter function\n");
+
+	if (!avStream.has_value() || clients.empty()) {
+		APP_DBG("MediaLiveVideo: No active stream or clients available\n");
 		return;
 	}
 
 	auto avStreamValue = avStream.value();
 	rtc::binary *pSample = nullptr;
 
-		Stream::pubLicStreamPOSIXMutexLOCK();
+	Stream::pubLicStreamPOSIXMutexLOCK();
 	{
+		APP_DBG("MediaLiveVideo: Acquired stream lock\n");
 		syncLiveWaitTime(avStreamValue);
 		avStreamValue->mediaLive->video->loadNextTime();
 		avStreamValue->mediaLive->loadNextSample(samples, totalSamples, StreamSourceType::Video);
@@ -231,12 +235,20 @@ void Stream::MediaLiveVideo(bool isFullHD, uint8_t *samples, uint32_t totalSampl
 	}
 	Stream::pubLicStreamPOSIXMutexUNLOCK();
 
-		lockMutexListClients();
+	if (!pSample) {
+		APP_DBG("MediaLiveVideo: No sample available\n");
+		return;
+	}
+
+	lockMutexListClients();
 	{
+		APP_DBG("MediaLiveVideo: Locked clients mutex\n");
 		for (auto it : clients) {
+			APP_DBG("MediaLiveVideo: Processing client %s \n", it.first.c_str());
+
 			Client::lockSignalingClient();
 			if (Client::getSignalingStatus()) {
-				APP_DBG("ignore buffer video\n");
+				APP_DBG("MediaLiveVideo: Signaling is active, ignoring buffer video for client %s\n", it.first.c_str());
 				Client::unLockSignalingClient();
 				break;
 			}
@@ -254,7 +266,8 @@ void Stream::MediaLiveVideo(bool isFullHD, uint8_t *samples, uint32_t totalSampl
 					} else {
 						isValid = (client->getLiveResolution() == LiveStream::eResolution::HD720p);
 					}
-					if (isValid == false) {
+					if (!isValid) {
+						APP_DBG("MediaLiveVideo: Resolution mismatch for client %s\n", id.c_str());
 						continue;
 					}
 
@@ -271,21 +284,30 @@ void Stream::MediaLiveVideo(bool isFullHD, uint8_t *samples, uint32_t totalSampl
 
 					try {
 						trackData->track->send(*pSample);
+						APP_DBG("MediaLiveVideo: Sent video packet to client %s\n", id.c_str());
 					} catch (const std::exception &e) {
 						APP_DBG("[ERR] Unable to send video packet to client %s, err: %s\n", id.c_str(), e.what());
 					}
+				} else {
+					APP_DBG("MediaLiveVideo: Client %s is not in LiveStream mode\n", id.c_str());
 				}
+			} else {
+				APP_DBG("MediaLiveVideo: Client %s is not ready or has no video track\n", id.c_str());
 			}
 		}
 	}
 	unlockMutexListClients();
 
-		#if 0
+// #if 0
+#if 1
 	pSample->clear();
-	#else
+#else
 	avStreamValue->mediaLive->rstSample(StreamSourceType::Video);
-	#endif
+#endif
+
+	APP_DBG("MediaLiveVideo: Exit function\n");
 }
+
 
 
 void Stream::MediaLiveAudio(uint8_t *samples, uint32_t totalSamples) {

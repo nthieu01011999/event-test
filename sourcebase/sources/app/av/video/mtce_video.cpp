@@ -228,6 +228,7 @@ void VideoChannel::diffSetAndGetConf(vvtk_video_config_t *videoConf, vvtk_video_
 // Constructor
 VideoCtrl::VideoCtrl() : mInitialized(false) {
     std::cout << "VideoCtrl initialized. Ready to configure channels." << std::endl;
+	videoForceStopStream = false;
 }
 
 // Destructor
@@ -293,6 +294,7 @@ void VideoCtrl::startStreamAllChannels() {
         }
     }
 	APP_PRINT("start stream done\n");
+	videoForceStopStream = false;
     setInitialized(true);
 }
 
@@ -359,20 +361,16 @@ int VideoCtrl::verifyConfig(mtce_encode_t *encodeConf) {
 }
 
 void VideoCtrl::setVideoEncodeConfig(const mtce_encode_t *newEncodeChannels) {
-    // Step 1: Initialize local variables (if any)
-	APP_DBG("[setVideoEncodeConfig] ==========================================\n");
-    // Step 2: Update the internal configuration with the new settings
-    memcpy(&mEncodeConfig, newEncodeChannels, sizeof(mEncodeConfig));
+ 	APP_DBG("[setVideoEncodeConfig] ==========================================\n");
+     memcpy(&mEncodeConfig, newEncodeChannels, sizeof(mEncodeConfig));
 
-    // Step 3: Verify the new configuration
-    int verificationResult = verifyConfig(&mEncodeConfig);
+     int verificationResult = verifyConfig(&mEncodeConfig);
     if (verificationResult != APP_CONFIG_SUCCESS) {
         APP_DBG("[video] Verification of new encode config failed\n");
         return;
     }
 
-    // Step 4: Apply the new configuration to the video channels
-    for (int i = 0; i < MTCE_MAX_STREAM_NUM; i++) {
+     for (int i = 0; i < MTCE_MAX_STREAM_NUM; i++) {
         mtce_mediaFormat_t *conf;
         if (i == MTCE_MAIN_STREAM) {
             conf = &mEncodeConfig.mainFmt;
@@ -437,7 +435,7 @@ VVTK_RET_CALLBACK onStopSubChannel(const vvtk_video_frame_t *videoFrame, const v
 
 extern "C" VVTK_RET_CALLBACK onStartMainChannel(const vvtk_video_frame_t *videoFrame, const void *arg) {
 	if (videoFrame->size > (int)sizeof(rtc::NalUnitHeader)) {
-		// onSampleVideoCapture(MTCE_MAIN_STREAM, videoFrame->data, videoFrame->size);
+		onSampleVideoCapture(MTCE_MAIN_STREAM, videoFrame->data, videoFrame->size);
 	}
 
 	return VVTK_RET_CALLBACK_CONTINUE;
@@ -445,7 +443,7 @@ extern "C" VVTK_RET_CALLBACK onStartMainChannel(const vvtk_video_frame_t *videoF
 
 extern "C" VVTK_RET_CALLBACK onStartSubChannel(const vvtk_video_frame_t *videoFrame, const void *arg) {
 	if (videoFrame->size > (int)sizeof(rtc::NalUnitHeader)) {
-		// onSampleVideoCapture(MTCE_SUB_STREAM, videoFrame->data, videoFrame->size);
+		onSampleVideoCapture(MTCE_SUB_STREAM, videoFrame->data, videoFrame->size);
 	}
 
 	return VVTK_RET_CALLBACK_CONTINUE;

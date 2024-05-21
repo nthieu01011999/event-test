@@ -45,6 +45,8 @@ public:
     int verifyConfig(mtce_encode_t *encodeConf);
 	void setVideoEncodeConfig(const mtce_encode_t *newEncodeChannels);
     void printEncodeConfig();
+
+	std::atomic<bool> videoForceStopStream;
 private:
 	VideoChannel mVideoChn[MTCE_MAX_STREAM_NUM];
 	mtce_encode_t mEncodeConfig;

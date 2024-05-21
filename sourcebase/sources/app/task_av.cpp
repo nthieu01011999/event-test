@@ -31,8 +31,7 @@ using namespace chrono;
 
 q_msg_t gw_task_av_mailbox;
 
-static pthread_mutex_t mtxStreamVideo = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t mtxListClients = PTHREAD_MUTEX_INITIALIZER;
+
 
 // VideoCtrl videoCtrl;
 static int8_t captureRetryCounter = 0;
