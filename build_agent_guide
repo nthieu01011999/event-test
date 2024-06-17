@@ -24,21 +24,24 @@
 	
 sudo minicom -D /dev/ttyUSB0 -b 57600
 
-telnet 192.168.1.8
+
+
+
+telnet 192.168.1.73
 
 mkdir -p /tmp/nfs
-mount -t nfs -o nolock 192.168.1.147:/mnt/nfs_share /tmp/nfs
+mount -t nfs -o nolock 192.168.1.74:/mnt/nfs_share /tmp/nfs
 
 
-cd /tmp/nfs/test
+cd /tmp/nfs/agent
 export LD_LIBRARY_PATH=/app/lib
 
 
 ./fcam-I03S-debug
 
 
-
-mount -t nfs -o nolock 192.168.1.7:/mnt/nfs_share /tmp/nfs
+1111
+ 
 
 
 
